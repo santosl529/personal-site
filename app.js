@@ -34,8 +34,8 @@ function renderCard(p) {
   btn.setAttribute('aria-haspopup', 'dialog');
   btn.innerHTML = `
     <img class="card-cover" src="${p.cover}" alt="" loading="lazy">
-    <div class="ptitle"><span>${p.context}</span></div>
-    <div class="card-title" style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:600;margin-bottom:10px">${p.title}</div>
+    <div class="card-ctx">${p.context}</div>
+    <div class="card-title">${p.title}</div>
     <p>${p.blurb}</p>
     <div class="tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
   `;
