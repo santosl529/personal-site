@@ -117,7 +117,36 @@ export const PROJECTS = [
     media: [],
     tags: ['React', 'Generative UI', 'AI', 'Supabase'],
     links: { live: 'https://druzy-xi.vercel.app/', repo: null },
-    body: '<!-- TODO: Lorenzo — write the Druzy case study. -->',
+    body: `
+      <p>Druzy is a self-hostable tracker for logging and visualizing arbitrary parts of your life
+      — sleep, mood, workouts, gratitude, whatever you decide matters. The defining idea is that you
+      describe a tracker in plain language and an assistant turns it into a structured, chartable
+      module. It is built for me and a handful of friends: tens of users, not thousands, which is a
+      licence to optimize for clarity instead of scale.</p>
+
+      <p>The AI layer is proposal-shaped rather than chat-shaped, and that is the design decision I
+      care about most. The assistant has four tools — propose a tracker schema, propose a formula
+      tracker whose daily value is computed from trackers you already keep, render a live chart from
+      your real rows, and compute a statistic like a trend, correlation, or streak. None of them
+      write to the database. Each returns a proposal that renders as a card you confirm or discard,
+      with Zod schemas shared between the tool output and the DB-facing types, so a malformed model
+      response fails at the boundary instead of halfway through a migration. An assistant that can
+      silently restructure your data is a worse product than one that has to ask.</p>
+
+      <p>Journal transcription forced a sharper privacy decision. Reading handwriting needs a vision
+      model, so the obvious build sends photos of your journal to a cloud API — which is exactly the
+      data you would least want to send. Instead it runs against a local Ollama model, and the
+      request goes straight from the browser to localhost, never through the Next.js server, so the
+      images and the transcribed text cannot leave the machine even though the app is deployed on
+      Vercel. That is a structural guarantee rather than a promise in a privacy policy. Food-photo
+      calorie estimation does use a cloud vision model — a different bargain for a different kind of
+      picture, made deliberately rather than by default.</p>
+
+      <p>The visual identity carries a real mechanic: each tracker is a geode that opens as you log,
+      with openness derived from consistency over a trailing window and five discrete stages from
+      Dormant to Bloomed. It is the largest thing here — around 17,000 lines over 123 commits, with
+      row-level security on every user-owned table — and it is the one I actually use.</p>
+    `,
   },
   {
     slug: 'centered',
@@ -131,7 +160,39 @@ export const PROJECTS = [
     media: [],
     tags: ['Swift', 'SwiftUI', 'AVAudioEngine', 'vDSP', 'DSP'],
     links: { live: null, repo: null },
-    body: '<!-- TODO: Lorenzo — write the Centered case study. -->',
+    body: `
+      <p>Centered is an iOS app that trains sight reading and intonation at the same time on a wind
+      instrument. A note appears on a staff, you play it on your actual horn, and the app scores two
+      things through the microphone: whether you played the right note, and how well centered it was
+      in cents. The interaction model is lifted from Zetamac — a bounded run, one integer score,
+      instant restart, no XP, no unlockables. The score exists to be beaten.</p>
+
+      <p>The wedge is that existing microphone-based sight-reading trainers treat pitch as binary:
+      right note or wrong note. None of them take intonation seriously, and most are built
+      piano-first with transposing instruments bolted on afterward, which is backwards for the
+      people most likely to need the drill. Centered inverts both — intonation is a scored dimension
+      from the start, and correct handling of transposing instruments is assumed from the first line
+      of code. The feature I have not found anywhere else is the per-note intonation profile:
+      accumulated across sessions, it becomes a map of which written pitches you personally play
+      sharp or flat on your specific instrument. Every wind player knows their horn has problem
+      notes; almost none of them know their own tendencies quantitatively.</p>
+
+      <p>The DSP is the point of the project, not an obstacle to route around, so the pitch detector
+      is a hand-written YIN implementation on top of Accelerate rather than a library call. Real-time
+      audio sets the hard constraint: no allocation and no locks on the render thread. The hand-off
+      out of the audio callback is therefore a lock-free single-producer/single-consumer ring buffer
+      — exactly one thread on each side is what makes plain acquire/release atomics sufficient. Those
+      atomics come from a small C11 shim, because holding the deployment floor at iOS 17 rules out
+      Swift's Synchronization module, which needs iOS 18. Before any Swift existed I validated the
+      whole pitch pipeline offline in Python against recorded samples, so the app was never the place
+      where I found out the algorithm was wrong.</p>
+
+      <p><strong>Still in progress.</strong> Offline DSP validation, the audio spike, instrument
+      configuration with staff rendering in SwiftUI's Canvas, and single-note mode are done and
+      tested. Runs are bounded by lives rather than a clock — each note gives you a window to begin
+      a qualifying hold, and missing it costs one. Stats are next; phrase and master modes are not
+      built yet.</p>
+    `,
   },
   {
     slug: 'mandate-intelligence-pipeline',
@@ -145,7 +206,30 @@ export const PROJECTS = [
     media: [],
     tags: ['Llama 3.3 70B', 'Groq', 'BeautifulSoup', 'pandas'],
     links: { live: null, repo: null },
-    body: '<!-- TODO: Lorenzo — write the Mandate Intelligence Pipeline case study. -->',
+    body: `
+      <p>A technical assessment for a capital-markets firm, built as a five-stage pipeline: scrape,
+      extract, classify, qualify, match. It ingests messy public web pages for investors and
+      startups, structures them, sorts each entity into buy-side or sell-side, applies qualification
+      filters, and ends with ranked buy-side matches for every qualified sell-side mandate.</p>
+
+      <p>The extraction stage is where the judgment sits. Pages are fetched and stripped of nav,
+      footer, script, and style before whitespace is collapsed and the text is capped — enough to
+      answer the question, cheap enough to run across the whole set. That text goes to a
+      Groq-hosted Llama 3.3 70B behind a fixed JSON schema: entity type, sector, geography, funding
+      signal, stage, ticket size, a confidence score, and an evidence snippet. The deliberate choice
+      is that the model is used as a robust parser and never as the scorer. Classification,
+      qualification, and match ranking are ordinary code operating on structured fields, which keeps
+      every decision inspectable and keeps hallucination confined to a stage whose output is
+      schema-checked.</p>
+
+      <p>Two things I would defend in review. Some sites simply cannot be scraped — JavaScript-heavy
+      single-page apps and real bot protection — and there is no reliable general fix, so the honest
+      answer is to scrape a wider set and drop the failures, with every request wrapped so a failure
+      produces an error flag instead of killing the run. And each stage caches its output to disk,
+      so re-running the notebook skips any API call whose result already exists. That made iteration
+      nearly free, which is the difference between tuning the prompt properly and settling for the
+      first thing that parsed.</p>
+    `,
   },
   {
     slug: 'parking-spot-detection',
