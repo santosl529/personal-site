@@ -81,7 +81,7 @@
   .card{
     background:rgba(253,246,236,.035);
     border:1px solid var(--line);
-    border-radius:14px;padding:28px 28px 26px;
+    border-radius:14px;padding:22px 22px 24px;
     position:relative;overflow:hidden;
     transition:transform .25s ease,border-color .25s ease,background .25s ease;
     will-change:transform;
@@ -97,7 +97,8 @@
 
   /* --- project cards as buttons --- */
   .card{display:block;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer}
-  .card-cover{width:calc(100% + 56px);margin:-28px -28px 18px;display:block;aspect-ratio:16/9;object-fit:cover;border-bottom:1px solid var(--line)}
+  .card-cover{width:100%;margin:0 0 20px;display:block;aspect-ratio:16/9;object-fit:cover;
+    border:1px solid var(--line);border-radius:10px;background:rgba(253,246,236,.04)}
   .card.is-source{visibility:hidden}
 
   /* --- everything-else compact list --- */
@@ -118,11 +119,12 @@
   dialog.project-modal[open]{display:flex;align-items:center;justify-content:center}
   dialog.project-modal::backdrop{background:rgba(26,26,46,.85)}
   @supports (backdrop-filter:blur(6px)){dialog.project-modal::backdrop{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}}
-  .modal-flip{position:relative;width:min(640px,100%);max-height:calc(100vh - 48px);overflow-y:auto;background:var(--ink);border:1px solid var(--line);border-radius:14px;opacity:0;transition:opacity .22s ease,transform .22s ease}
+  .modal-flip{position:relative;width:min(900px,100%);max-height:calc(100vh - 48px);overflow-y:auto;background:var(--ink);border:1px solid var(--line);border-radius:14px;opacity:0;transition:opacity .22s ease,transform .22s ease}
   .modal-flip.is-open{opacity:1}
   .modal-close{position:absolute;top:14px;right:14px;z-index:2;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:rgba(26,26,46,.7);color:var(--cream);font-size:.9rem;line-height:1;cursor:pointer;transition:border-color .2s,color .2s}
   .modal-close:hover,.modal-close:focus-visible{border-color:var(--brass);color:var(--brass)}
-  .modal-media{aspect-ratio:16/9;overflow:hidden;border-radius:14px 14px 0 0;background:rgba(253,246,236,.04)}
+  .modal-media{aspect-ratio:16/9;overflow:hidden;margin:22px 22px 0;border-radius:10px;
+    border:1px solid var(--line);background:rgba(253,246,236,.04)}
   .modal-cover{width:100%;height:100%;object-fit:cover;display:block}
   .modal-content{padding:28px 32px 34px;opacity:0;transform:translateY(8px);transition:opacity .18s ease,transform .18s ease}
   .modal-content.in{opacity:1;transform:none}
