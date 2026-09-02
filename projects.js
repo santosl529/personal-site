@@ -235,14 +235,44 @@ export const PROJECTS = [
     slug: 'parking-spot-detection',
     title: 'Parking-Spot Detection',
     context: 'Research · UDelaware CAR Lab',
-    year: 2023,
+    year: 2024,
     featured: true,
     accent: 'var(--tomato)',
-    blurb: 'Real-time computer vision for parking occupancy — trained and deployed a lightweight YOLOv8n model on live camera feeds.',
-    cover: 'assets/projects/parking-spot-detection/cover.svg',
+    blurb: 'A parking-slot finder that was never trained on parking slots — it detects cars with YOLOv8n and infers the open spaces from the gaps between them.',
+    cover: 'assets/projects/parking-spot-detection/cover.jpg',
     media: [],
-    tags: ['YOLOv8n', 'PyTorch', 'OpenCV'],
+    tags: ['YOLOv8n', 'PyTorch', 'OpenCV', 'Roboflow'],
     links: { live: null, repo: null },
-    body: '<!-- TODO: Lorenzo — write the Parking-Spot Detection case study. -->',
+    body: `
+      <p>A tool that finds the open slots in a parking lot from a photo or a video of it, built at
+      the University of Delaware's CAR Lab. The part I like is what it does <em>not</em> do: it was
+      never trained on parking spaces. The model is a single-class detector that only knows how to
+      find cars. Every empty slot in the output is inferred geometrically from where the cars are
+      not.</p>
+
+      <p>The inference is deliberately simple. Sort the detected boxes left to right, take the mean
+      car width, and treat any gap between two consecutive cars wider than that mean as an open
+      slot, drawn as a line between the neighbours it sits between. A camera multiplier scales the
+      threshold to account for viewing angle, since a lot photographed obliquely compresses the gaps.
+      Doing it this way sidesteps the expensive part of the obvious approach — nobody has to hand-
+      label parking bays, and the same model works on a lot it has never seen, because the thing it
+      recognizes is cars rather than one particular painted layout.</p>
+
+      <p>The failure mode that shaped the code is background traffic. A detector pointed at a lot
+      also finds the cars in the next lot over and on the road behind it, and those are small in
+      frame — small enough to drag the mean width down until every genuine gap clears the threshold
+      and the whole image fills with phantom slots. The fix is a size filter that discards any box
+      whose area falls below a fraction of the mean box area before any measuring happens. That
+      threshold is a CLI flag rather than a constant, along with detection confidence and the camera
+      multiplier, because the right values genuinely depend on where the camera is standing.</p>
+
+      <p>The detector is a YOLOv8n fine-tuned for 100 epochs at 640px on a single-class car dataset
+      from Roboflow — the smallest model in the family, chosen because the geometry does the real
+      work and the detector only has to be reliable, not clever. The video path runs the same
+      pipeline per frame and reassembles the annotated frames into an MP4. Worth stating plainly:
+      the geometry assumes a roughly side-on view of a single row of cars. An overhead shot of a
+      multi-row lot breaks the left-to-right ordering the whole method rests on, and would need a
+      different approach rather than a tuned constant.</p>
+    `,
   },
 ];
