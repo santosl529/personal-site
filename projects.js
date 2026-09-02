@@ -161,20 +161,4 @@ export const PROJECTS = [
     links: { live: null, repo: null },
     body: '<!-- TODO: Lorenzo — write the Parking-Spot Detection case study. -->',
   },
-  {
-    slug: 'sat-forge',
-    title: 'SAT Forge',
-    context: 'Personal',
-    year: 2026,
-    featured: false,
-    accent: 'var(--blue)',
-    blurb: 'An SAT-prep platform built around spaced-repetition solo practice, with 1v1 real-time matches coming soon.',
-    cover: 'assets/projects/sat-forge/cover.svg',
-    media: [
-      // { type: 'video', src: 'assets/projects/sat-forge/demo.mp4', poster: 'assets/projects/sat-forge/demo-poster.jpg' },
-    ],
-    tags: ['Next.js 15', 'Supabase', 'Drizzle', 'Tailwind v4', 'KaTeX'],
-    links: { live: 'https://sat-forge-livid.vercel.app/practice', repo: null },
-    body: '<!-- TODO: Lorenzo — write the SAT Forge case study. -->',
-  },
 ];
