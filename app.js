@@ -125,18 +125,33 @@ function stopModalVideo() {
   modalCoverVideo.load();
 }
 
-function runFlip(cardEl) {
+// Keep in sync with the .modal-flip transition duration in index.html.
+const FLIP_MS = 220;
+let isClosing = false;
+
+// Geometry for the card <-> modal FLIP. `ok` is false when the card has no
+// box to fly from (never rendered, or opened from a deep link).
+function flipFrom(cardEl) {
   const first = cardEl.getBoundingClientRect();
   const last = modalFlip.getBoundingClientRect();
+  return {
+    ok: first.width > 0 && last.width > 0,
+    transform: `translate(${first.left - last.left}px, ${first.top - last.top}px) ` +
+               `scale(${first.width / last.width}, ${first.height / last.height})`,
+  };
+}
 
-  const dx = first.left - last.left;
-  const dy = first.top - last.top;
-  const sx = first.width / last.width;
-  const sy = first.height / last.height;
+function runFlip(cardEl) {
+  const from = flipFrom(cardEl);
+  if (!from.ok) {
+    modalFlip.classList.add('is-open');
+    setTimeout(() => modalContent.classList.add('in'), 60);
+    return;
+  }
 
   modalFlip.style.transition = 'none';
   modalFlip.style.transformOrigin = 'top left';
-  modalFlip.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+  modalFlip.style.transform = from.transform;
   modalFlip.classList.add('is-open');
 
   requestAnimationFrame(() => {
@@ -147,6 +162,28 @@ function runFlip(cardEl) {
   });
 
   setTimeout(() => modalContent.classList.add('in'), 230);
+}
+
+// The open animation played backwards: content fades, the panel shrinks back
+// into the card it came from, and only then does the dialog actually close.
+function runReverseFlip(cardEl, done) {
+  const from = flipFrom(cardEl);
+  if (!from.ok) return done();
+
+  modalContent.classList.remove('in');
+  dialog.classList.add('is-closing');
+
+  // Pin the current identity transform, flush it, then animate to the card.
+  modalFlip.style.transition = 'none';
+  modalFlip.style.transformOrigin = 'top left';
+  modalFlip.style.transform = 'none';
+  void modalFlip.offsetWidth;
+
+  modalFlip.style.transition = '';
+  modalFlip.style.transform = from.transform;
+  modalFlip.classList.remove('is-open');
+
+  setTimeout(done, FLIP_MS);
 }
 
 function openProject(slug, triggerEl, opts = {}) {
@@ -187,10 +224,27 @@ function openProject(slug, triggerEl, opts = {}) {
 }
 
 function closeProject() {
-  dialog.close();
+  if (isClosing) return;
+
+  const cardEl = currentTrigger && currentTrigger.classList.contains('card')
+    ? currentTrigger
+    : null;
+
+  if (!cardEl || reduceMotion.matches) {
+    dialog.close();
+    return;
+  }
+
+  isClosing = true;
+  runReverseFlip(cardEl, () => {
+    isClosing = false;
+    dialog.close();
+  });
 }
 
 dialog.addEventListener('close', () => {
+  isClosing = false;
+  dialog.classList.remove('is-closing');
   document.body.classList.remove('scroll-locked');
   stopModalVideo();
   modalFlip.classList.remove('is-open');
@@ -207,6 +261,10 @@ dialog.addEventListener('close', () => {
   currentSlug = null;
 });
 
+dialog.addEventListener('cancel', e => {
+  e.preventDefault();
+  closeProject();
+});
 dialog.addEventListener('click', e => {
   if (e.target === dialog) closeProject();
 });
@@ -219,7 +277,7 @@ window.addEventListener('popstate', () => {
       openProject(match[1], null, { pushHistory: false });
     }
   } else if (dialog.open) {
-    dialog.close();
+    closeProject();
   }
 });
 

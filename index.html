@@ -117,7 +117,9 @@
   dialog.project-modal{border:none;padding:24px;margin:0;background:transparent;width:100vw;height:100vh;max-width:none;max-height:none}
   dialog.project-modal:not([open]){display:none}
   dialog.project-modal[open]{display:flex;align-items:center;justify-content:center}
-  dialog.project-modal::backdrop{background:rgba(26,26,46,.85)}
+  dialog.project-modal::backdrop{background:rgba(26,26,46,.85);transition:opacity .22s ease}
+  dialog.project-modal.is-closing::backdrop{opacity:0}
+  dialog.project-modal.is-closing{pointer-events:none}
   @supports (backdrop-filter:blur(6px)){dialog.project-modal::backdrop{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}}
   .modal-flip{position:relative;width:min(900px,100%);max-height:calc(100vh - 48px);overflow-y:auto;background:var(--ink);border:1px solid var(--line);border-radius:14px;opacity:0;transition:opacity .22s ease,transform .22s ease}
   .modal-flip.is-open{opacity:1}
