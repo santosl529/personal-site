@@ -68,7 +68,42 @@ export const PROJECTS = [
     media: [],
     tags: ['Claude Opus', 'Next.js', 'Drizzle', 'Supabase RLS', 'Vitest'],
     links: { live: null, repo: null },
-    body: '<!-- TODO: Lorenzo — write the CaseTester case study. -->',
+    body: `
+      <p>CaseTester is an AI interviewer for undergraduates recruiting into management consulting.
+      It runs a McKinsey-style interviewer-led case: it talks, listens, releases data only when
+      asked, pushes back on weak reasoning, and produces a rubric-scored feedback report at the
+      end. The bar it has to clear is not "an LLM can roleplay an interviewer" — it obviously can.
+      The bar is feedback good enough that a candidate would choose it over free ChatGPT. The
+      rubric is the product.</p>
+
+      <p>The hard problem is that a case interview is defined by information the candidate is not
+      allowed to have yet. An LLM handed the full case will leak numbers early, and worse, will
+      invent numbers that sound plausible — which quietly teaches candidates to do arithmetic on
+      fiction. So the interviewer model never receives un-revealed values at all. It can surface a
+      figure only by calling a gated reveal tool that the orchestrator validates against a data
+      ledger, and after every turn a deterministic audit re-scans the model's output for any number
+      outside the revealed set. That check runs in code, not in a second model call, because ground
+      truth exists and there is no reason to ask an LLM to confirm it. The same pass enforces
+      interviewer conduct — spoken-length turns, no markdown, one task at a time.</p>
+
+      <p>Scoring is two passes over an eight-dimension rubric. A judge scores the transcript; a
+      claim-verifier then re-checks the critical sections one claim at a time and drops the ones the
+      transcript contradicts. That second pass exists for a specific failure I could not catch any
+      other way: a deterministic evidence audit can verify a quote, but an omission claim — "the
+      candidate never considered hedging" — contains no quote to check, and is exactly the kind of
+      confident, unfalsifiable criticism that makes feedback feel authoritative while being wrong.
+      Turn and scoring models both run Opus after pilot runs showed a smaller model missing live
+      math errors; that was an evaluation result, not a preference.</p>
+
+      <p>One structural rule governed the build: the entire text case ships before any voice code
+      exists. The interviewer talks to the candidate through an abstract channel interface, and no
+      voice library may appear in the dependency graph of the orchestrator, agent, or scoring
+      layers — enforced as a lint error rather than a good intention, because architectural rules
+      that live only in a document lose to deadlines. Voice is a wrapper, not a foundation.
+      <strong>Still in progress:</strong> the text product runs end to end — session, turn loop,
+      scoring, PDF report — behind 293 tests across 33 files. The voice layer is deliberately
+      deferred, waiting behind its interface.</p>
+    `,
   },
   {
     slug: 'druzy',
