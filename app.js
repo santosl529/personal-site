@@ -125,6 +125,24 @@ function stopModalVideo() {
   modalCoverVideo.load();
 }
 
+// Bring the trigger fully on screen before the modal opens. Doing it here
+// rather than on close means the card is already where it belongs when the
+// panel shrinks back into it — no jump after the animation settles.
+function scrollTriggerIntoView(el) {
+  const rect = el.getBoundingClientRect();
+  const vh = window.innerHeight;
+  const margin = 24;
+  if (rect.top >= margin && rect.bottom <= vh - margin) return;
+
+  const target = rect.height + margin * 2 <= vh
+    ? window.scrollY + rect.top - (vh - rect.height) / 2  // centre it when it fits
+    : window.scrollY + rect.top - margin;                 // otherwise pin its top
+  // 'instant' matters: the page sets scroll-behavior:smooth, and 'auto' would
+  // defer to it — the modal would then fly from a stale rect while the page
+  // kept scrolling behind the backdrop.
+  window.scrollTo({ top: Math.max(0, target), behavior: 'instant' });
+}
+
 // Keep in sync with the .modal-flip transition duration in index.html.
 const FLIP_MS = 220;
 let isClosing = false;
@@ -192,10 +210,14 @@ function openProject(slug, triggerEl, opts = {}) {
   if (!p) return;
 
   ensureRowVisible(p);
-  document.body.classList.add('scroll-locked');
 
   currentSlug = slug;
   currentTrigger = triggerEl || document.querySelector(`[data-slug="${slug}"]`);
+
+  // Must happen before the lock (overflow:hidden) and before runFlip reads
+  // the card's rect, or the FLIP flies from a stale position.
+  if (currentTrigger) scrollTriggerIntoView(currentTrigger);
+  document.body.classList.add('scroll-locked');
 
   populateModal(p);
   modalContent.classList.remove('in');
@@ -252,7 +274,7 @@ dialog.addEventListener('close', () => {
   document.querySelectorAll('.card.is-source').forEach(el => el.classList.remove('is-source'));
   modalFlip.style.transform = '';
   modalFlip.style.transition = '';
-  if (currentTrigger) currentTrigger.focus();
+  if (currentTrigger) currentTrigger.focus({ preventScroll: true });
   currentTrigger = null;
 
   if (location.hash === `#/${currentSlug}`) {
