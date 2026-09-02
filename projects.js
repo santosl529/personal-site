@@ -113,7 +113,7 @@ export const PROJECTS = [
     featured: true,
     accent: 'var(--jade)',
     blurb: 'A habit and metrics tracker where you can generate custom trackers with AI and get analytics on anything you track.',
-    cover: 'assets/projects/druzy/cover.svg',
+    cover: 'assets/projects/druzy/cover.png',
     media: [],
     tags: ['React', 'Generative UI', 'AI', 'Supabase'],
     links: { live: 'https://druzy-xi.vercel.app/', repo: null },
