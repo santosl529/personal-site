@@ -38,8 +38,8 @@ export const PROJECTS = [
       over that cache. Knowing ground truth is what makes the tool teachable rather than merely
       illustrative: you can show where an algorithm is wrong, not just what it returned.</p>
 
-      <p>I own the visualization and interaction layer — 66 of the repository's 168 commits, more
-      than anyone else on the project. The core of it is a ~2,200-line ECharts compare panel that
+      <p>I own the visualization and interaction layer, and the largest share of the dashboard's
+      commit history. The core of it is a ~2,200-line ECharts compare panel that
       animates a trajectory forward in time against the ground-truth path, with side-by-side and
       stacked comparison modes for watching two algorithms diverge on identical input. Around it I
       built the zoomable timeline and ping selection, hover cues that expose the core points inside
