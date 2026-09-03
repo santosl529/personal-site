@@ -18,7 +18,11 @@ export const PROJECTS = [
     accent: 'var(--blue)',
     blurb: 'An interactive dashboard for comparing eight GPS stop-detection algorithms, built for an NSF-funded mobility-science lab at Penn.',
     cover: 'assets/projects/nomad-stop-detection-dashboard/cover.png',
-    media: [],
+    media: [
+      { type: 'video',
+        src: 'assets/projects/nomad-stop-detection-dashboard/demo.mp4',
+        poster: 'assets/projects/nomad-stop-detection-dashboard/demo-poster.jpg' },
+    ],
     tags: ['Next.js 16', 'React 19', 'Python', 'GeoPandas', 'Mobility Science'],
     links: { live: null, repo: 'https://github.com/Watts-Lab/nomad-stop-detection-dashboard' },
     body: `
