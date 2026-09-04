@@ -248,7 +248,11 @@ export const PROJECTS = [
     accent: 'var(--tomato)',
     blurb: 'A parking-slot finder that was never trained on parking slots — it detects cars with YOLOv8n and infers the open spaces from the gaps between them.',
     cover: 'assets/projects/parking-spot-detection/cover.jpg',
-    media: [],
+    media: [
+      { type: 'video',
+        src: 'assets/projects/parking-spot-detection/demo.mp4',
+        poster: 'assets/projects/parking-spot-detection/demo-poster.jpg' },
+    ],
     tags: ['YOLOv8n', 'PyTorch', 'OpenCV', 'Roboflow'],
     links: { live: null, repo: null },
     body: `
