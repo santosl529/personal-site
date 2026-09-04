@@ -128,6 +128,10 @@
   .modal-media{aspect-ratio:16/9;overflow:hidden;margin:22px 22px 0;border-radius:10px;
     border:1px solid var(--line);background:rgba(253,246,236,.04)}
   .modal-cover{width:100%;height:100%;object-fit:cover;display:block}
+  /* display:block above out-specifies the UA's [hidden]{display:none}, so without
+     this the img and video are both laid out: the img fills the box and the video
+     is clipped below it, leaving a video project showing the previous cover. */
+  .modal-cover[hidden]{display:none}
   .modal-content{padding:28px 32px 34px;opacity:0;transform:translateY(8px);transition:opacity .18s ease,transform .18s ease}
   .modal-content.in{opacity:1;transform:none}
   .modal-ctx{font-family:'JetBrains Mono',monospace;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent,var(--brass));margin-bottom:10px}
