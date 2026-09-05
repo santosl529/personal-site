@@ -69,7 +69,6 @@ function renderCard(p) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'card reveal in';
-  btn.style.setProperty('--accent', p.accent);
   btn.dataset.slug = p.slug;
   btn.setAttribute('aria-haspopup', 'dialog');
   btn.innerHTML = `
@@ -128,7 +127,6 @@ function renderGrid() {
 
 function populateModal(p) {
   modalCtx.textContent = p.context;
-  modalCtx.style.setProperty('--accent', p.accent);
   modalTitle.textContent = p.title;
   modalTags.innerHTML = p.tags.map(t => `<span class="tag">${t}</span>`).join('');
   modalBody.innerHTML = p.body;
