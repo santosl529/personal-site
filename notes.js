@@ -114,6 +114,11 @@ function init() {
     for (const l of [ground, cracks]) {
       l.el.width = Math.round(vw * dpr);
       l.el.height = Math.round(vh * dpr);
+      // The bitmap is in device pixels; the box has to stay in CSS pixels, or
+      // the canvas sizes itself from the bitmap and everything drawn lands
+      // scaled and offset by the pixel ratio.
+      l.el.style.width = vw + 'px';
+      l.el.style.height = vh + 'px';
       l.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
   }

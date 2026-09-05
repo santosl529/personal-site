@@ -278,8 +278,13 @@
   /* Two layers. The ground is revealed from behind the content, so text and
      cards ride over the new color as it sweeps past; the cracks are drawn
      over everything, above the nav. The notes themselves sit above both. */
-  #bloom-ground{position:fixed;inset:0;z-index:-1;pointer-events:none;display:block}
-  #bloom-cracks{position:fixed;inset:0;z-index:200;pointer-events:none;display:block}
+  /* A canvas is a replaced element, so inset:0 alone does NOT stretch it —
+     its box falls back to the bitmap size, which is vw*dpr. Pin the CSS
+     size explicitly or everything draws scaled and displaced by the pixel
+     ratio on any non-1x screen. */
+  #bloom-ground,#bloom-cracks{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;display:block}
+  #bloom-ground{z-index:-1}
+  #bloom-cracks{z-index:200}
 
   /* --- reveal animation --- */
   .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease,color .65s ease,background-color .65s ease,border-color .65s ease}
