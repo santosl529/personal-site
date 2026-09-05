@@ -25,6 +25,46 @@ function extIcon() {
   return '<svg class="ext-icon" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 8L8 2M8 2H3.5M8 2V6.5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
 
+function videoOf(p) {
+  return (p.media || []).find(m => m.type === 'video');
+}
+
+// The modal fetched nothing until it opened: poster and clip both started
+// downloading after the click, so the panel flew open over an empty box. The
+// posters are small enough to just grab up front; the clips get warmed on
+// intent (hover, focus, or the press that precedes the click).
+//
+// Warming resolves to a blob URL rather than leaning on the HTTP cache, so it
+// works regardless of what cache headers the host sends for media. A click
+// that beats the fetch falls back to the network URL and behaves as before.
+const warmedUrls = new Map();
+const warming = new Set();
+
+function warmVideo(p) {
+  const v = videoOf(p);
+  if (!v || warming.has(v.src)) return;
+  warming.add(v.src);
+  fetch(v.src)
+    .then(r => (r.ok ? r.blob() : null))
+    .then(b => { if (b) warmedUrls.set(v.src, URL.createObjectURL(b)); })
+    .catch(() => {});
+}
+
+function warmOnIntent(el, p) {
+  if (!videoOf(p)) return;
+  const warm = () => warmVideo(p);
+  ['pointerenter', 'pointerdown', 'focus'].forEach(ev => {
+    el.addEventListener(ev, warm, { once: true });
+  });
+}
+
+function preloadPosters() {
+  PROJECTS.forEach(p => {
+    const v = videoOf(p);
+    if (v && v.poster) new Image().src = v.poster;
+  });
+}
+
 function renderCard(p) {
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -40,6 +80,7 @@ function renderCard(p) {
     <div class="tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
   `;
   btn.addEventListener('click', () => openProject(p.slug, btn));
+  warmOnIntent(btn, p);
   return btn;
 }
 
@@ -55,7 +96,9 @@ function renderRow(p) {
     <span class="row-year">${p.year}</span>
     ${linkHtml}
   `;
-  li.querySelector('.row-title').addEventListener('click', e => openProject(p.slug, e.currentTarget));
+  const rowTitle = li.querySelector('.row-title');
+  rowTitle.addEventListener('click', e => openProject(p.slug, e.currentTarget));
+  warmOnIntent(rowTitle, p);
   return li;
 }
 
@@ -95,13 +138,17 @@ function populateModal(p) {
   if (p.links.repo) links.push(`<a href="${p.links.repo}" target="_blank" rel="noopener">Repo${extIcon()}</a>`);
   modalLinks.innerHTML = links.join('');
 
-  const video = p.media.find(m => m.type === 'video');
+  const video = videoOf(p);
   if (video) {
     modalCoverImg.hidden = true;
     modalCoverVideo.hidden = false;
     modalCoverVideo.poster = video.poster;
-    modalCoverVideo.dataset.src = video.src;
+    // Reassigning an identical src would restart the download, which defeats
+    // both the warming above and the buffer kept across close.
+    const src = warmedUrls.get(video.src) || video.src;
+    if (modalCoverVideo.getAttribute('src') !== src) modalCoverVideo.src = src;
   } else {
+    modalCoverVideo.pause();
     modalCoverVideo.hidden = true;
     modalCoverImg.hidden = false;
     modalCoverImg.src = p.cover;
@@ -110,9 +157,6 @@ function populateModal(p) {
 
 function playModalVideo() {
   if (modalCoverVideo.hidden) return;
-  if (modalCoverVideo.dataset.src && !modalCoverVideo.getAttribute('src')) {
-    modalCoverVideo.src = modalCoverVideo.dataset.src;
-  }
   if (!reduceMotion.matches) {
     modalCoverVideo.play().catch(() => {});
   }
@@ -121,8 +165,9 @@ function playModalVideo() {
 function stopModalVideo() {
   if (modalCoverVideo.hidden) return;
   modalCoverVideo.pause();
-  modalCoverVideo.removeAttribute('src');
-  modalCoverVideo.load();
+  // Rewind but hold onto the src. Dropping it and calling load() discarded the
+  // whole buffer, so reopening the same project re-downloaded the clip.
+  modalCoverVideo.currentTime = 0;
 }
 
 // Bring the trigger fully on screen before the modal opens. Doing it here
@@ -304,6 +349,12 @@ window.addEventListener('popstate', () => {
 });
 
 renderGrid();
+
+if (window.requestIdleCallback) {
+  requestIdleCallback(preloadPosters);
+} else {
+  setTimeout(preloadPosters, 200);
+}
 
 const initialMatch = location.hash.match(/^#\/(.+)$/);
 if (initialMatch && byslug[initialMatch[1]]) {
