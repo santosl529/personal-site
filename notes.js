@@ -2,21 +2,25 @@
 // spread out of them.
 //
 // Hover and click are deliberately the same animation at two scales. Hovering a
-// note fractures the page a little way around it in that song's color — enough
-// to preview what clicking does without committing to it. Clicking runs the
-// same fracture to the edge of the screen and lets the color flood through the
-// cracks; once the flood covers the viewport the theme is committed and the
-// canvas fades, leaving the site tinted.
+// note fractures the page around it in that song's color — enough to preview
+// what clicking does without committing to it. Clicking runs the same fracture
+// to the edge of the screen, and the song's new ground is revealed through it.
+//
+// The click is a reveal rather than a wash. The palette is committed the
+// instant you click, so the type and the rules start easing into the new hue
+// straight away; the body's old ground is pinned in place underneath, and the
+// new one grows from the note on a canvas behind the content. Text and cards
+// ride over the colour as it sweeps past them, which is what makes it read as
+// the site changing rather than a sheet of paint crossing the screen.
 //
 // No audio yet. Clicking recolors and nothing else.
 
-const CELL = 6;             // pixel grid the cracks and the flood snap to
-const HOVER_REACH = 200;    // how far cracks creep while hovering
-const CLEARANCE = 16;       // keep the fracture off the note glyph itself
-const CRACK_MS = 480;       // click: cracks race to the far corner
-const FLOOD_DELAY = 140;    // click: flood starts after the cracks have a lead
-const FLOOD_MS = 560;
-const FADE_MS = 460;
+const CELL = 7;             // pixel grid the cracks and the ground snap to
+const HOVER_REACH = 260;    // how far cracks creep while hovering
+const CRACK_MS = 520;       // click: cracks race to the far corner
+const GROUND_DELAY = 120;   // click: the ground follows the cracks out
+const GROUND_MS = 640;
+const FADE_MS = 520;
 
 const root = document.documentElement;
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -36,14 +40,16 @@ function rng(seed) {
   };
 }
 
-// A fracture is a handful of trunks walking outward from the note, each
+// A fracture is a handful of trunks walking outward from the note itself, each
 // jittering as it goes and occasionally throwing off a branch. Every point
 // carries its distance from the note, so growth is just "draw everything
-// closer than `reach`" — the same test for a 200px hover and a full flood.
+// closer than `reach`" — the same test for a hover and for a full sweep.
+// Points also carry a weight, so a crack is heavy where it leaves the note and
+// thins out as it travels.
 function makeCracks(seed, maxLen) {
   const rand = rng(seed);
   const cracks = [];
-  const TRUNKS = 6;
+  const TRUNKS = 7;
 
   function walk(x, y, angle, startD, len, depth) {
     const pts = [];
@@ -55,8 +61,10 @@ function makeCracks(seed, maxLen) {
       x += Math.cos(angle) * step;
       y += Math.sin(angle) * step;
       d += step;
-      pts.push({ x, y, d });
-      if (depth < 2 && rand() < 0.04 && end - d > 40) {
+      // Thin right at the note so the glyph you are pointing at still reads,
+      // thick just outside it, thinning again as the crack travels.
+      pts.push({ x, y, d, heavy: depth === 0 && d > 18 && d < 75 });
+      if (depth < 2 && rand() < 0.045 && end - d > 40) {
         const turn = (rand() < 0.5 ? -1 : 1) * (0.5 + rand() * 0.6);
         walk(x, y, angle + turn, d, (end - d) * 0.65, depth + 1);
       }
@@ -71,7 +79,7 @@ function makeCracks(seed, maxLen) {
   return cracks;
 }
 
-// Per-row wobble for the flood's edge. Precomputed and indexed by row so the
+// Per-row wobble for the ground's edge. Precomputed and indexed by row so the
 // edge holds still between frames instead of boiling.
 function makeJitter(seed, rows) {
   const rand = rng(seed);
@@ -81,22 +89,33 @@ function makeJitter(seed, rows) {
 }
 
 function init() {
-  const canvas = document.createElement('canvas');
-  canvas.id = 'bloom';
-  canvas.setAttribute('aria-hidden', 'true');
-  document.body.appendChild(canvas);
-  const ctx = canvas.getContext('2d');
+  function layer(id) {
+    const c = document.createElement('canvas');
+    c.id = id;
+    c.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(c);
+    return { el: c, ctx: c.getContext('2d') };
+  }
+  const ground = layer('bloom-ground');   // behind the content
+  const cracks = layer('bloom-cracks');   // over everything
 
-  let dpr = 1;
+  // An offscreen probe wearing a [data-theme] so a song's palette can be read
+  // straight out of the stylesheet rather than restated here in JS.
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;left:-9999px';
+  document.body.appendChild(probe);
+
   let vw = 0;
   let vh = 0;
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     vw = window.innerWidth;
     vh = window.innerHeight;
-    canvas.width = Math.round(vw * dpr);
-    canvas.height = Math.round(vh * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    for (const l of [ground, cracks]) {
+      l.el.width = Math.round(vw * dpr);
+      l.el.height = Math.round(vh * dpr);
+      l.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
   }
   resize();
   window.addEventListener('resize', resize);
@@ -105,9 +124,22 @@ function init() {
   let active = null;  // the note currently blooming
   let frame = 0;
 
-  function colorOf(note) {
-    const token = '--' + (note.dataset.song || 'fg');
-    return getComputedStyle(root).getPropertyValue(token).trim() || '#16161A';
+  const token = note => note.dataset.song || 'fg';
+
+  function readVar(el, name) {
+    return getComputedStyle(el).getPropertyValue(name).trim();
+  }
+
+  // Custom properties inherit, so an unthemed probe would just report whatever
+  // song is currently on. Read the monochrome palette once, before any song.
+  const BASE = { crack: readVar(root, '--fg'), ground: readVar(root, '--bg') };
+
+  // A song's crack color is its note swatch; its ground is that palette's --bg.
+  function paletteOf(note) {
+    const t = token(note);
+    if (t === 'fg') return BASE;
+    probe.setAttribute('data-theme', t);
+    return { crack: readVar(root, '--' + t), ground: readVar(probe, '--bg') };
   }
 
   function originOf(note) {
@@ -115,8 +147,8 @@ function init() {
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   }
 
-  // Distance from the note to the furthest corner: how far a flood has to
-  // travel before the screen is fully covered.
+  // Distance from the note to the furthest corner: how far the new ground has
+  // to travel before the screen is covered.
   function coverRadius(o) {
     return Math.hypot(Math.max(o.x, vw - o.x), Math.max(o.y, vh - o.y));
   }
@@ -124,13 +156,15 @@ function init() {
   function begin(note) {
     if (active && active.note === note && active.phase !== 'fade') return;
     const seed = notes.indexOf(note) * 9176 + 17;
+    const pal = paletteOf(note);
     active = {
       note,
       phase: 'hover',
-      color: colorOf(note),
-      cracks: makeCracks(seed, Math.hypot(vw, vh)),
+      crack: pal.crack,
+      ground: pal.ground,
+      shapes: makeCracks(seed, Math.hypot(vw, vh)),
       reach: active && active.note === note ? active.reach : 0,
-      flood: 0,
+      spread: 0,
       alpha: 1,
       t0: 0
     };
@@ -145,9 +179,9 @@ function init() {
   }
 
   function commit(note) {
-    const token = note.dataset.song;
-    if (token === 'fg') root.style.removeProperty('--theme');
-    else root.style.setProperty('--theme', `var(--${token})`);
+    const t = token(note);
+    if (t === 'fg') root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', t);
     notes.forEach(n => n.setAttribute('aria-pressed', String(n === note)));
   }
 
@@ -157,10 +191,18 @@ function init() {
       return;
     }
     if (!active || active.note !== note) begin(note);
+    // Pin the ground the page has now, so committing the palette recolors the
+    // type and the rules while the old floor stays put for the sweep to erase.
+    document.body.style.backgroundColor = readVar(root, '--bg');
+    commit(active.note);
     active.phase = 'burst';
     active.t0 = performance.now();
-    active.committed = false;
     run();
+  }
+
+  function settle() {
+    document.body.style.removeProperty('background-color');
+    ground.ctx.clearRect(0, 0, vw, vh);
   }
 
   const easeOut = t => 1 - Math.pow(1 - t, 3);
@@ -175,30 +217,32 @@ function init() {
       a.reach += (HOVER_REACH - a.reach) * 0.16;
     } else if (a.phase === 'retract') {
       a.reach += (0 - a.reach) * 0.22;
-      if (a.reach < 1) { active = null; ctx.clearRect(0, 0, vw, vh); return; }
+      if (a.reach < 1) { active = null; cracks.ctx.clearRect(0, 0, vw, vh); return; }
     } else if (a.phase === 'burst') {
       const R = coverRadius(o);
       const t = performance.now() - a.t0;
       a.reach = Math.max(a.reach, easeOut(Math.min(1, t / CRACK_MS)) * R);
-      a.flood = easeOut(Math.max(0, Math.min(1, (t - FLOOD_DELAY) / FLOOD_MS))) * R;
-      if (a.flood >= R) {
-        // The page is fully covered, so swapping the token now is invisible;
-        // the fade that follows is what reveals the recolored site.
-        commit(a.note);
+      a.spread = easeOut(Math.max(0, Math.min(1, (t - GROUND_DELAY) / GROUND_MS))) * R;
+      if (a.spread >= R) {
+        // The new ground now covers the viewport, so handing it back to the
+        // body and clearing the layer is invisible. Only the cracks are left
+        // to fade.
+        settle();
+        a.spread = 0;
         a.phase = 'fade';
         a.t0 = performance.now();
       }
     } else if (a.phase === 'fade') {
       a.alpha = 1 - Math.min(1, (performance.now() - a.t0) / FADE_MS);
-      if (a.alpha <= 0) { active = null; ctx.clearRect(0, 0, vw, vh); return; }
+      if (a.alpha <= 0) { active = null; cracks.ctx.clearRect(0, 0, vw, vh); return; }
     }
 
-    ctx.clearRect(0, 0, vw, vh);
-    ctx.fillStyle = a.color;
-
-    // Flood first, cracks on top, so the veins stay visible against the fill.
-    if (a.flood > 0) {
-      const r = a.flood;
+    // --- the new ground, growing behind the content ---
+    if (a.spread > 0) {
+      const g = ground.ctx;
+      g.clearRect(0, 0, vw, vh);
+      g.fillStyle = a.ground;
+      const r = a.spread;
       const top = Math.floor((o.y - r) / CELL) * CELL;
       for (let gy = top; gy <= o.y + r; gy += CELL) {
         const dy = gy + CELL / 2 - o.y;
@@ -206,27 +250,28 @@ function init() {
         if (inside <= 0) continue;
         const wob = jitter[Math.abs(gy / CELL | 0) % jitter.length];
         const hw = Math.max(0, Math.round((Math.sqrt(inside) + wob) / CELL) * CELL);
-        ctx.globalAlpha = a.alpha;
-        ctx.fillRect(Math.round((o.x - hw) / CELL) * CELL, gy, hw * 2, CELL);
+        g.fillRect(Math.round((o.x - hw) / CELL) * CELL, gy, hw * 2, CELL);
       }
     }
 
-    for (const c of a.cracks) {
-      for (const p of c.pts) {
+    // --- the cracks, over everything ---
+    const c = cracks.ctx;
+    c.clearRect(0, 0, vw, vh);
+    c.fillStyle = a.crack;
+    for (const shape of a.shapes) {
+      for (const p of shape.pts) {
         if (p.d > a.reach) break;
-        // The canvas paints over the note, so hold the cracks back far
-        // enough that the glyph you are pointing at stays readable.
-        if (p.d < CLEARANCE) continue;
         const tip = Math.min(1, (a.reach - p.d) / 30);
-        ctx.globalAlpha = a.alpha * c.alpha * (0.3 + 0.7 * tip);
-        ctx.fillRect(
+        c.globalAlpha = a.alpha * shape.alpha * (0.35 + 0.65 * tip);
+        const size = p.heavy ? CELL * 2 : CELL;
+        c.fillRect(
           Math.round((o.x + p.x) / CELL) * CELL,
           Math.round((o.y + p.y) / CELL) * CELL,
-          CELL, CELL
+          size, size
         );
       }
     }
-    ctx.globalAlpha = 1;
+    c.globalAlpha = 1;
     run();
   }
 
