@@ -191,6 +191,64 @@
   .contact .links a:hover{color:var(--theme);border-color:var(--theme)}
   footer{text-align:center;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--mist);padding:26px 0 50px}
 
+  /* --- song notes --- */
+  /* The notes are the only color on a monochrome page, which is most of what
+     tells you they are worth touching. The rest is hover: the note swells,
+     a ring appears, and colored cracks creep out of it across the page. */
+  .name-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .h2-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .h2-row h2{margin-bottom:0}
+
+  .note{
+    position:relative;flex:0 0 auto;
+    display:inline-flex;align-items:center;justify-content:center;
+    width:34px;height:34px;padding:0;border:0;background:none;
+    color:var(--note,var(--fg));cursor:pointer;
+    transition:transform .22s cubic-bezier(.2,.9,.3,1.5);
+  }
+  .note svg{width:15px;height:19px;overflow:visible}
+  /* The notes keep their song color even while the page is monochrome —
+     four specks of color on a grey page is most of the invitation. */
+  .note[data-song="blue"]{--note:var(--blue)}
+  .note[data-song="jade"]{--note:var(--jade)}
+  .note[data-song="brass"]{--note:var(--brass)}
+  .note[data-song="tomato"]{--note:var(--tomato)}
+  .note[data-song="fg"]{--note:var(--fg)}
+  .note::before{
+    content:"";position:absolute;inset:0;border-radius:50%;
+    border:1px solid currentColor;opacity:0;transform:scale(.55);
+    transition:opacity .25s ease,transform .25s ease;
+  }
+  .note:hover,.note:focus-visible{transform:scale(1.2)}
+  .note:hover::before,.note:focus-visible::before{opacity:.55;transform:scale(1)}
+  .note:focus-visible{outline:none}
+  .note[aria-pressed="true"]::before{opacity:.85;transform:scale(1)}
+
+  .note-hero{width:46px;height:46px}
+  .note-hero svg{width:21px;height:26px}
+  /* One unprompted ping on load: the universal "sound comes from here". */
+  @keyframes note-ping{
+    0%{opacity:.5;transform:scale(.65)}
+    70%,100%{opacity:0;transform:scale(1.75)}
+  }
+  .note-hero::after{
+    content:"";position:absolute;inset:0;border-radius:50%;
+    border:1px solid currentColor;opacity:0;
+    animation:note-ping 2.4s ease-out 1.6s 2;
+  }
+
+  .note-hint{
+    display:flex;align-items:center;gap:10px;margin-top:24px;
+    font-family:'JetBrains Mono',monospace;font-size:.76rem;
+    letter-spacing:.1em;color:var(--mist);
+  }
+  .note-hint::before{content:"";width:24px;height:1px;background:currentColor;opacity:.55}
+  /* The contact section is centred, so its heading row has to be too. */
+  .contact .h2-row{justify-content:center}
+
+  /* The bloom sits above the nav so a flood actually covers the page. */
+  #bloom{position:fixed;inset:0;z-index:200;pointer-events:none;display:block}
+
   /* --- reveal animation --- */
   .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
   .reveal.in{opacity:1;transform:none}
@@ -211,6 +269,7 @@
     .reveal{opacity:1;transform:none}
     html{scroll-behavior:auto}
     .modal-flip,.modal-content{transition:none!important}
+    .note-hero::after{display:none}
   }
 </style>
 </head>
@@ -231,8 +290,19 @@
   <!-- HERO -->
   <header class="hero">
     <div class="eyebrow">CS @ UPenn SEAS</div>
-    <h1>Lorenzo Santos</h1>
+    <div class="name-row">
+      <h1>Lorenzo Santos</h1>
+      <button type="button" class="note note-hero" data-song="fg"
+              aria-label="Clear the song and return the site to black and white">
+        <svg viewBox="0 0 16 20" aria-hidden="true" focusable="false">
+          <ellipse cx="5.4" cy="15.4" rx="4.6" ry="3.4" transform="rotate(-18 5.4 15.4)" fill="currentColor"/>
+          <path d="M9.7 14.6V3.1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M9.7 3.1c3.5 1.1 5.1 3.1 4.7 6.3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
     <div class="tagline" id="tagline"><span class="cursor">&nbsp;</span></div>
+    <p class="note-hint">click a note to hear me play</p>
   </header>
 
   <div class="staff" aria-hidden="true">
@@ -251,7 +321,17 @@
   <!-- PROJECTS -->
   <section id="projects">
     <div class="sec-label reveal">01 — Projects</div>
-    <h2 class="reveal">Selected Projects</h2>
+    <div class="h2-row reveal">
+      <h2>Selected Projects</h2>
+      <button type="button" class="note" data-song="blue"
+              aria-label="Play a saxophone clip and turn the site blue">
+        <svg viewBox="0 0 16 20" aria-hidden="true" focusable="false">
+          <ellipse cx="5.4" cy="15.4" rx="4.6" ry="3.4" transform="rotate(-18 5.4 15.4)" fill="currentColor"/>
+          <path d="M9.7 14.6V3.1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M9.7 3.1c3.5 1.1 5.1 3.1 4.7 6.3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
     <div class="proj-grid reveal" id="proj-grid"></div>
     <div class="proj-list-wrap">
       <ul class="proj-list" id="proj-list" hidden></ul>
@@ -292,7 +372,17 @@
   <!-- WORK & RESEARCH -->
   <section id="work">
     <div class="sec-label reveal">02 — Experience</div>
-    <h2 class="reveal">Work &amp; Research</h2>
+    <div class="h2-row reveal">
+      <h2>Work &amp; Research</h2>
+      <button type="button" class="note" data-song="jade"
+              aria-label="Play a saxophone clip and turn the site green">
+        <svg viewBox="0 0 16 20" aria-hidden="true" focusable="false">
+          <ellipse cx="5.4" cy="15.4" rx="4.6" ry="3.4" transform="rotate(-18 5.4 15.4)" fill="currentColor"/>
+          <path d="M9.7 14.6V3.1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M9.7 3.1c3.5 1.1 5.1 3.1 4.7 6.3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
 
     <div class="role reveal">
       <div class="when">2026 — now</div>
@@ -340,7 +430,17 @@
   <!-- OFF THE CLOCK -->
   <section id="life">
     <div class="sec-label reveal">03 — Interests</div>
-    <h2 class="reveal">Beyond the Code</h2>
+    <div class="h2-row reveal">
+      <h2>Beyond the Code</h2>
+      <button type="button" class="note" data-song="brass"
+              aria-label="Play a saxophone clip and turn the site gold">
+        <svg viewBox="0 0 16 20" aria-hidden="true" focusable="false">
+          <ellipse cx="5.4" cy="15.4" rx="4.6" ry="3.4" transform="rotate(-18 5.4 15.4)" fill="currentColor"/>
+          <path d="M9.7 14.6V3.1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M9.7 3.1c3.5 1.1 5.1 3.1 4.7 6.3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
     <div class="beyond-grid">
       <div class="beyond-card reveal">
         <div class="icon">Reeds</div>
@@ -373,7 +473,17 @@
   <!-- CONTACT -->
   <section class="contact" id="contact">
     <div class="sec-label reveal">04 — Contact</div>
-    <h2 class="reveal">Get in Touch</h2>
+    <div class="h2-row reveal">
+      <h2>Get in Touch</h2>
+      <button type="button" class="note" data-song="tomato"
+              aria-label="Play a saxophone clip and turn the site red">
+        <svg viewBox="0 0 16 20" aria-hidden="true" focusable="false">
+          <ellipse cx="5.4" cy="15.4" rx="4.6" ry="3.4" transform="rotate(-18 5.4 15.4)" fill="currentColor"/>
+          <path d="M9.7 14.6V3.1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M9.7 3.1c3.5 1.1 5.1 3.1 4.7 6.3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
     <div class="links reveal">
       <span>santos7@engineering.upenn.edu</span>
       <a href="https://github.com/santosl529" target="_blank" rel="noopener" aria-label="Lorenzo Santos's GitHub profile (opens in new tab)">GitHub</a>
@@ -425,6 +535,7 @@
 </script>
 
 <script type="module" src="app.js"></script>
+<script type="module" src="notes.js"></script>
 
 </body>
 </html>
