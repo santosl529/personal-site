@@ -283,6 +283,11 @@ function openProject(slug, triggerEl, opts = {}) {
     }
   }
 
+  // .modal-flip is the scroll container, and it keeps the offset from the last
+  // project that was open. Reset it once the dialog is rendered so every open
+  // starts at the cover image rather than mid-body.
+  modalFlip.scrollTop = 0;
+
   playModalVideo();
 
   if (pushHistory) {

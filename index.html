@@ -85,8 +85,8 @@
   .card::before{content:"";position:absolute;top:0;left:0;width:100%;height:3px;background:var(--accent,var(--brass))}
   .card:hover{transform:translateY(-4px);background:rgba(253,246,236,.06);border-color:rgba(253,246,236,.22)}
   .card .card-ctx{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent,var(--brass));margin-bottom:8px}
-  .card .card-title{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:600;margin-bottom:10px}
-  .card p{font-size:.96rem;color:var(--mist);margin-bottom:18px}
+  .card .card-title{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:600;margin-bottom:10px;color:var(--cream)}
+  .card p{font-size:.96rem;color:var(--cream);margin-bottom:18px}
   .card p b{color:var(--cream);font-weight:500}
   .tags{display:flex;flex-wrap:wrap;gap:7px}
   .tag{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent,var(--brass));border:1px solid rgba(253,246,236,.25);border-color:color-mix(in srgb, var(--accent,var(--brass)) 40%, transparent);padding:3px 9px;border-radius:20px}
@@ -135,7 +135,7 @@
   .modal-links{display:flex;gap:18px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:.8rem}
   .modal-links a{color:var(--accent,var(--brass));transition:opacity .2s}
   .modal-links a:hover{opacity:.7}
-  .modal-body{margin-top:20px;font-size:.98rem;color:var(--mist)}
+  .modal-body{margin-top:20px;font-size:.98rem;color:var(--cream)}
   .modal-body p{margin-bottom:14px}
   body.scroll-locked{overflow:hidden}
 
@@ -216,7 +216,7 @@
 
   <!-- HERO -->
   <header class="hero">
-    <div class="eyebrow">CS @ UPenn SEAS · Class of 2029</div>
+    <div class="eyebrow">CS @ UPenn SEAS</div>
     <h1>Lorenzo Santos</h1>
     <div class="tagline" id="tagline"><span class="cursor">&nbsp;</span></div>
   </header>
@@ -376,7 +376,7 @@
   // typewriter tagline
   (function(){
     var el=document.getElementById('tagline');
-    var line="CS @ UPenn · research, real-time apps, and the occasional saxophone solo.";
+    var line="Research, real-time apps, and the occasional saxophone solo.";
     var motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
     var stopped=false;
     if(motionQuery.matches){el.textContent=line;stopped=true;}
