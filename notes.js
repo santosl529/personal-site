@@ -256,6 +256,10 @@ function init() {
       crack: pal.crack,
       ground: pal.ground,
       mode: isFrame(note) ? 'frame' : 'crack',
+      // A song's rim fractures are drawn in the ground it is bringing. The
+      // reset note's ground is the paper itself, which on a white page is
+      // nothing at all, so it fractures in ink and lets the paper follow.
+      edgeInk: token(note) === 'fg' ? pal.crack : pal.ground,
       shapes: isFrame(note) ? null : shapesFor(note),
       reach: active && active.note === note ? active.reach : 0,
       inset: 0,
@@ -365,10 +369,15 @@ function init() {
       if (a.reach < 1) { active = null; wipe(); return; }
     } else if (a.phase === 'burst') {
       const t = Math.min(1, (performance.now() - a.t0) / EDGE_MS);
-      a.reach = a.from + (far - a.from) * easeOut(t);
-      a.thick = CELL * (2 + 5 * t);
-      // Lags the fractures deliberately, so they are seen arriving first.
-      a.inset = 0.5 * Math.pow(t, 1.9);
+      // The front closes from the rim, and the fractures ride just ahead of it
+      // rather than racing the whole screen. Letting them run to the far corner
+      // meant that by mid-collapse they had converged over the middle and the
+      // front was still out at the edges — which read as a slab in the centre
+      // rather than as cracks leading the colour in.
+      a.inset = 0.5 * Math.pow(t, 1.6);
+      const front = a.inset * Math.min(vw, vh);
+      a.reach = Math.max(a.from, front + rest);
+      a.thick = CELL * (2 + 2 * t);
       if (t >= 1) {
         // The solid front has met itself in the middle; the ground can go back
         // to the body without the handover being visible.
@@ -380,23 +389,28 @@ function init() {
 
     const g = ground.ctx;
     g.clearRect(0, 0, vw, vh);
-    g.fillStyle = a.ground;
 
-    if (a.inset > 0) {
-      const ix = Math.min(snap(a.inset * vw), Math.ceil(vw / 2));
-      const iy = Math.min(snap(a.inset * vh), Math.ceil(vh / 2));
-      g.fillRect(0, 0, vw, iy);
-      g.fillRect(0, vh - iy, vw, iy);
-      g.fillRect(0, iy, ix, vh - iy * 2);
-      g.fillRect(vw - ix, iy, ix, vh - iy * 2);
-    }
-
+    // The fractures go down first so the advancing front paints over them as
+    // it closes. Where the two colours differ — the reset note's black cracks
+    // against the white it is bringing — that is what lets the ink lead and
+    // the paper swallow it, rather than black cells surviving on top.
+    g.fillStyle = a.edgeInk;
     const wdt = snap(a.thick) || CELL;
     for (const pts of shapesForEdge()) {
       for (const p of pts) {
         if (p.d > a.reach) break;
         g.fillRect(snap(p.x) - wdt / 2, snap(p.y) - wdt / 2, wdt, wdt);
       }
+    }
+
+    if (a.inset > 0) {
+      g.fillStyle = a.ground;
+      const ix = Math.min(snap(a.inset * vw), Math.ceil(vw / 2));
+      const iy = Math.min(snap(a.inset * vh), Math.ceil(vh / 2));
+      g.fillRect(0, 0, vw, iy);
+      g.fillRect(0, vh - iy, vw, iy);
+      g.fillRect(0, iy, ix, vh - iy * 2);
+      g.fillRect(vw - ix, iy, ix, vh - iy * 2);
     }
     groundBox = { x: 0, y: 0, w: vw, h: vh };
     run();
