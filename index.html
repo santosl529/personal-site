@@ -291,18 +291,47 @@
   .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
   .reveal.in{opacity:1;transform:none}
 
-  /* Cards are dealt onto the page rather than fading up: each carries an
-     offset and tilt from a random bearing, and travels to rest as it scrolls
-     into view. Entrance and hover share the transform property, so the order
-     here matters — .in clears the offset, and :hover takes over after. */
+  /* Flight and hover are kept on separate properties on purpose. The card's
+     travel uses the individual translate/rotate properties and hover uses
+     scale, so the scroll-driven animation below can own the card's position
+     outright while a hovered card still grows — an animation on `transform`
+     would win the whole property and kill the hover.
+
+     Fallback path, for browsers without scroll-driven animations: fire once on
+     the way in, as before. */
   .card.reveal,.beyond-card.reveal{
-    transform:translate(var(--fly-x,0),var(--fly-y,0)) rotate(var(--fly-r,0deg));
-    transition:opacity .55s ease,transform .8s cubic-bezier(.16,.72,.28,1),border-color .25s ease;
+    translate:var(--fly-x,0) var(--fly-y,0);
+    rotate:var(--fly-r,0deg);
+    transition:opacity .55s ease,translate .8s cubic-bezier(.16,.72,.28,1),
+               rotate .8s cubic-bezier(.16,.72,.28,1),border-color .25s ease;
   }
-  .card.reveal.in,.beyond-card.reveal.in{transform:none}
+  .card.reveal.in,.beyond-card.reveal.in{translate:0 0;rotate:0deg}
   /* z-index so a growing card sits over its neighbour rather than under the
      one that happens to come after it in the grid. */
-  .card.in:hover,.beyond-card.in:hover{transform:scale(1.05);z-index:1}
+  .card:hover,.beyond-card:hover{scale:1.05;z-index:1}
+
+  @keyframes card-fly{
+    0%{translate:var(--fly-x,0) var(--fly-y,0);rotate:var(--fly-r,0deg);opacity:0}
+    45%{opacity:1}
+    100%{translate:0 0;rotate:0deg;opacity:1}
+  }
+  /* Where the browser can drive an animation from scroll position, the card's
+     flight is scrubbed by the scrollbar rather than fired once: scroll back up
+     and it flies back out the way it came. It stays an ordinary button the
+     whole way — only translate, rotate and opacity are touched, and a
+     translated element is still hit-tested where it is drawn, so it is
+     clickable at every point in the flight. */
+  @supports (animation-timeline:view()){
+    .card.reveal,.beyond-card.reveal{
+      transition:border-color .25s ease;
+      animation-name:card-fly;
+      animation-duration:auto;
+      animation-timing-function:linear;
+      animation-fill-mode:both;
+      animation-timeline:view();
+      animation-range:cover 0% cover 22%;
+    }
+  }
 
   @media(max-width:760px){
     .wrap{padding:0 20px}
@@ -330,7 +359,8 @@
   @media(prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important}
     .reveal{opacity:1;transform:none}
-    .card,.beyond-card,.card.reveal,.beyond-card.reveal{transform:none!important}
+    .card,.beyond-card,.card.reveal,.beyond-card.reveal{
+      translate:none!important;rotate:none!important;scale:none!important;opacity:1!important}
     html{scroll-behavior:auto}
     .modal-flip,.modal-content{transition:none!important}
     .note-hero::after{display:none}
