@@ -212,7 +212,10 @@ function init() {
 
   function originOf(note) {
     const r = note.getBoundingClientRect();
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    // The radius comes back with it: the fracture leaves from the note but must
+    // not be drawn inside the ring, or it fills the disc the note sits in and
+    // the note stops reading as a control.
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: r.width / 2 };
   }
 
   // Distance from the note to the furthest corner: how far the new ground has
@@ -400,7 +403,11 @@ function init() {
   // the path, in the note's swatch. The heading fracture used to taper its
   // alpha and switch cell size partway along, which read as a different kind of
   // mark from the rim ones.
-  function paintFracture(g, shapes, ox, oy, reach, wdt) {
+  function paintFracture(g, shapes, ox, oy, reach, wdt, hole) {
+    // `hole` keeps cells off the note itself. Measured from the fracture's own
+    // origin, so it only applies where the shapes are relative to one — the rim
+    // fractures pass it nothing.
+    const clear = hole ? hole + wdt / 2 : 0;
     for (const pts of shapes) {
       // Points run in order along their own path, so one past the reach means
       // the rest of that branch is too, and a branch starting beyond it is
@@ -408,6 +415,7 @@ function init() {
       if (pts.length && pts[0].d > reach) continue;
       for (const p of pts) {
         if (p.d > reach) break;
+        if (clear && Math.hypot(p.x, p.y) < clear) continue;
         g.fillRect(snap(ox + p.x) - wdt / 2, snap(oy + p.y) - wdt / 2, wdt, wdt);
       }
     }
@@ -513,7 +521,7 @@ function init() {
     groundBox = boxAround(o, Math.max(a.reach, a.spread));
 
     g.fillStyle = a.crack;
-    paintFracture(g, a.shapes, o.x, o.y, a.reach, snap(a.thick) || CELL);
+    paintFracture(g, a.shapes, o.x, o.y, a.reach, snap(a.thick) || CELL, o.r + 4);
 
     if (a.spread > 0) {
       g.fillStyle = a.ground;
