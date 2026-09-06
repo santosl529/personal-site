@@ -27,8 +27,9 @@ const CRACK_MS = 520;       // click: cracks race to the far corner
 const GROUND_DELAY = 120;   // click: the ground follows the cracks out
 const GROUND_MS = 640;
 const FADE_MS = 520;
-const FRAME_REST = 1 / 8;   // how far a nav note's border reaches in, per side
-const FRAME_MS = 620;       // and how long it takes to close over the screen
+const EDGE_SEEDS = 16;      // fractures spaced around the rim of the screen
+const EDGE_REACH = 0.19;    // hover: how far in they creep, of the short side
+const EDGE_MS = 680;        // click: how long they take to close over the screen
 
 const root = document.documentElement;
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -87,6 +88,49 @@ function makeCracks(seed, maxLen) {
   return cracks;
 }
 
+// Fractures for a nav note: instead of one origin, a set of them spaced around
+// the rim of the screen, each walking inward. Distance is measured along the
+// path from the edge, so growth stays the same "draw everything closer than
+// reach" test the heading fractures use.
+function makeEdgeCracks(w, h, seed) {
+  const rand = rng(seed);
+  const shapes = [];
+  const per = 2 * (w + h);
+  const far = Math.hypot(w, h);
+
+  function walk(x, y, angle, startD, len, depth) {
+    const pts = [];
+    let d = startD;
+    const end = startD + len;
+    while (d < end) {
+      angle += (rand() - 0.5) * 0.5;
+      const step = CELL * (1 + Math.floor(rand() * 2));
+      x += Math.cos(angle) * step;
+      y += Math.sin(angle) * step;
+      d += step;
+      pts.push({ x, y, d });
+      if (depth < 2 && rand() < 0.05 && end - d > 40) {
+        const turn = (rand() < 0.5 ? -1 : 1) * (0.4 + rand() * 0.6);
+        walk(x, y, angle + turn, d, (end - d) * 0.6, depth + 1);
+      }
+    }
+    shapes.push(pts);
+  }
+
+  for (let i = 0; i < EDGE_SEEDS; i++) {
+    // Spaced around the perimeter with a little scatter, so they spread over
+    // all four sides instead of clustering on one.
+    const t = ((i + rand() * 0.7) / EDGE_SEEDS) * per;
+    let x, y, inward;
+    if (t < w)              { x = t;                 y = 0;                 inward = Math.PI / 2; }
+    else if (t < w + h)     { x = w;                 y = t - w;             inward = Math.PI; }
+    else if (t < 2 * w + h) { x = w - (t - w - h);   y = h;                 inward = -Math.PI / 2; }
+    else                    { x = 0;                 y = h - (t - 2*w - h); inward = 0; }
+    walk(x, y, inward + (rand() - 0.5) * 0.9, 0, far * (0.5 + rand() * 0.5), 0);
+  }
+  return shapes;
+}
+
 // Per-row wobble for the ground's edge. Precomputed and indexed by row so the
 // edge holds still between frames instead of boiling.
 function makeJitter(seed, rows) {
@@ -118,11 +162,13 @@ function init() {
   // Declared above resize(), which clears it — resize runs once during init,
   // and a const is in its temporal dead zone until its declaration does.
   const shapeCache = new Map();
+  let edgeShapes = null;   // rim fractures, sized to the viewport
 
   let vw = 0;
   let vh = 0;
   function resize() {
     shapeCache.clear();   // shapes are generated to the viewport diagonal
+    edgeShapes = null;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     vw = window.innerWidth;
     vh = window.innerHeight;
@@ -212,7 +258,8 @@ function init() {
       mode: isFrame(note) ? 'frame' : 'crack',
       shapes: isFrame(note) ? null : shapesFor(note),
       reach: active && active.note === note ? active.reach : 0,
-      inset: active && active.note === note ? active.inset : 0,
+      inset: 0,
+      thick: CELL,
       spread: 0,
       alpha: 1,
       t0: 0
@@ -286,27 +333,45 @@ function init() {
     ctx.clearRect(box.x, box.y, box.w, box.h);
   }
 
-  // A band of the song's ground around the edge of the screen. Hovering opens
-  // it to an eighth of the way in on each side; pressing runs it on to a half,
-  // at which point the two sides have met in the middle and the screen is
-  // covered. Drawn on the layer behind the content, so it reads as the page's
-  // background changing rather than a panel over the top of it.
-  function drawFrame(a) {
+  // A nav note's preview. Fractures come in from points all around the rim of
+  // the screen, drawn in the song's ground on the layer behind the content, so
+  // it reads as the page's own background breaking inward. Hovering creeps
+  // them a fifth of the way in; pressing runs them to the far corner while
+  // they thicken, and a solid front follows them in and closes over whatever
+  // they leave behind — the fractures lead, the colour arrives after.
+  function shapesForEdge() {
+    if (!edgeShapes) edgeShapes = makeEdgeCracks(vw, vh, 0x3d9e);
+    return edgeShapes;
+  }
+
+  function drawEdge(a) {
     // Moving from a heading note straight onto a nav one leaves that note's
-    // fracture painted on the layer above; nothing else clears it, because a
-    // frame never touches that canvas.
+    // fracture painted on the layer above; nothing else clears it, because an
+    // edge fracture never touches that canvas.
     if (crackBox) { clearBox(cracks.ctx, crackBox); crackBox = null; }
+
+    const far = Math.hypot(vw, vh);
+    const rest = Math.min(vw, vh) * EDGE_REACH;
+
     if (a.phase === 'hover') {
-      a.inset += (FRAME_REST - a.inset) * 0.18;
+      a.reach += (rest - a.reach) * 0.16;
+      // Two cells wide rather than one: these are drawn in the song's own
+      // ground, which sits barely above the paper, so a hairline vanishes.
+      a.thick = CELL * 2;
+      a.inset = 0;
     } else if (a.phase === 'retract') {
-      a.inset += (0 - a.inset) * 0.22;
-      if (a.inset < 0.002) { active = null; wipe(); return; }
+      a.reach += (0 - a.reach) * 0.22;
+      a.thick = CELL * 2;
+      if (a.reach < 1) { active = null; wipe(); return; }
     } else if (a.phase === 'burst') {
-      const t = Math.min(1, (performance.now() - a.t0) / FRAME_MS);
-      a.inset = a.from + (0.5 - a.from) * easeOut(t);
+      const t = Math.min(1, (performance.now() - a.t0) / EDGE_MS);
+      a.reach = a.from + (far - a.from) * easeOut(t);
+      a.thick = CELL * (2 + 5 * t);
+      // Lags the fractures deliberately, so they are seen arriving first.
+      a.inset = 0.5 * Math.pow(t, 1.9);
       if (t >= 1) {
-        // The band has closed over the whole viewport, so handing the ground
-        // back to the body underneath cannot be seen.
+        // The solid front has met itself in the middle; the ground can go back
+        // to the body without the handover being visible.
         settle();
         active = null;
         return;
@@ -316,12 +381,23 @@ function init() {
     const g = ground.ctx;
     g.clearRect(0, 0, vw, vh);
     g.fillStyle = a.ground;
-    const ix = Math.min(snap(a.inset * vw), Math.ceil(vw / 2));
-    const iy = Math.min(snap(a.inset * vh), Math.ceil(vh / 2));
-    g.fillRect(0, 0, vw, iy);
-    g.fillRect(0, vh - iy, vw, iy);
-    g.fillRect(0, iy, ix, vh - iy * 2);
-    g.fillRect(vw - ix, iy, ix, vh - iy * 2);
+
+    if (a.inset > 0) {
+      const ix = Math.min(snap(a.inset * vw), Math.ceil(vw / 2));
+      const iy = Math.min(snap(a.inset * vh), Math.ceil(vh / 2));
+      g.fillRect(0, 0, vw, iy);
+      g.fillRect(0, vh - iy, vw, iy);
+      g.fillRect(0, iy, ix, vh - iy * 2);
+      g.fillRect(vw - ix, iy, ix, vh - iy * 2);
+    }
+
+    const wdt = snap(a.thick) || CELL;
+    for (const pts of shapesForEdge()) {
+      for (const p of pts) {
+        if (p.d > a.reach) break;
+        g.fillRect(snap(p.x) - wdt / 2, snap(p.y) - wdt / 2, wdt, wdt);
+      }
+    }
     groundBox = { x: 0, y: 0, w: vw, h: vh };
     run();
   }
@@ -332,7 +408,7 @@ function init() {
     const a = active;
     const o = originOf(a.note);
 
-    if (a.mode === 'frame') { drawFrame(a); return; }
+    if (a.mode === 'frame') { drawEdge(a); return; }
 
     if (a.phase === 'hover') {
       a.reach += (HOVER_REACH - a.reach) * 0.16;
