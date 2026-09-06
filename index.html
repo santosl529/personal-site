@@ -117,7 +117,7 @@
     border:1px solid var(--line);
     border-radius:14px;padding:22px 22px 24px;
     position:relative;overflow:hidden;
-    transition:transform .25s ease,border-color .25s ease,background-color .25s ease;
+    transition:scale .25s ease,border-color .25s ease,background-color .25s ease;
   }
   .card::before{content:"";position:absolute;top:0;left:0;width:100%;height:2px;background:var(--theme)}
   .card:hover{border-color:color-mix(in srgb, var(--theme) 45%, transparent)}
@@ -203,7 +203,7 @@
   /* Three tonal treatments rather than three hues, so the row still has
      rhythm while the site is monochrome. Only the third takes the song
      color, which keeps the flood from turning the whole row into one slab. */
-  .beyond-card{padding:26px;border-radius:14px;background:var(--panel);border:1px solid var(--line);color:var(--fg);transition:transform .25s ease}
+  .beyond-card{padding:26px;border-radius:14px;background:var(--panel);border:1px solid var(--line);color:var(--fg);transition:scale .25s ease}
   .beyond-card:nth-child(2){background:var(--theme-2);border-color:var(--theme-2);color:var(--bg)}
   .beyond-card:nth-child(3){background:color-mix(in srgb, var(--theme) 8%, transparent);border-color:color-mix(in srgb, var(--theme) 38%, transparent)}
   .beyond-card .icon{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.65;margin-bottom:12px}
@@ -303,7 +303,7 @@
     translate:var(--fly-x,0) var(--fly-y,0);
     rotate:var(--fly-r,0deg);
     transition:opacity .55s ease,translate .8s cubic-bezier(.16,.72,.28,1),
-               rotate .8s cubic-bezier(.16,.72,.28,1),border-color .25s ease;
+               rotate .8s cubic-bezier(.16,.72,.28,1),scale .25s ease,border-color .25s ease;
   }
   .card.reveal.in,.beyond-card.reveal.in{translate:0 0;rotate:0deg}
   /* z-index so a growing card sits over its neighbour rather than under the
@@ -323,13 +323,13 @@
      clickable at every point in the flight. */
   @supports (animation-timeline:view()){
     .card.reveal,.beyond-card.reveal{
-      transition:border-color .25s ease;
+      transition:scale .25s ease,border-color .25s ease;
       animation-name:card-fly;
       animation-duration:auto;
       animation-timing-function:linear;
       animation-fill-mode:both;
       animation-timeline:view();
-      animation-range:cover 0% cover 22%;
+      animation-range:cover -30vh cover 22%;
     }
   }
 
