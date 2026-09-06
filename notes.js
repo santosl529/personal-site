@@ -21,12 +21,14 @@
 //
 // No audio yet. Clicking recolors and nothing else.
 
-const CELL = 7;             // pixel grid the cracks and the ground snap to
+const CELL = 5;             // pixel grid the cracks and the ground snap to
 const HOVER_REACH = 260;    // how far cracks creep while hovering
 const CRACK_MS = 520;       // click: cracks race to the far corner
 const GROUND_DELAY = 120;   // click: the ground follows the cracks out
 const GROUND_MS = 640;
 const FADE_MS = 520;
+const FRAME_REST = 1 / 8;   // how far a nav note's border reaches in, per side
+const FRAME_MS = 620;       // and how long it takes to close over the screen
 
 const root = document.documentElement;
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -143,6 +145,10 @@ function init() {
   let frame = 0;
 
   const token = note => note.dataset.song || 'fg';
+  // The notes in the nav bar preview differently: no fracture, just the song's
+  // ground laid in a band around the edges of the screen, which closes over
+  // the middle when the note is pressed.
+  const isFrame = note => note.classList.contains('note-nav');
 
   function readVar(el, name) {
     return getComputedStyle(el).getPropertyValue(name).trim();
@@ -203,8 +209,10 @@ function init() {
       phase: 'hover',
       crack: pal.crack,
       ground: pal.ground,
-      shapes: shapesFor(note),
+      mode: isFrame(note) ? 'frame' : 'crack',
+      shapes: isFrame(note) ? null : shapesFor(note),
       reach: active && active.note === note ? active.reach : 0,
+      inset: active && active.note === note ? active.inset : 0,
       spread: 0,
       alpha: 1,
       t0: 0
@@ -244,6 +252,7 @@ function init() {
     document.body.style.backgroundColor = readVar(root, '--bg');
     commit(active.note);
     active.phase = 'burst';
+    active.from = active.inset;
     active.t0 = performance.now();
     run();
   }
@@ -277,11 +286,53 @@ function init() {
     ctx.clearRect(box.x, box.y, box.w, box.h);
   }
 
+  // A band of the song's ground around the edge of the screen. Hovering opens
+  // it to an eighth of the way in on each side; pressing runs it on to a half,
+  // at which point the two sides have met in the middle and the screen is
+  // covered. Drawn on the layer behind the content, so it reads as the page's
+  // background changing rather than a panel over the top of it.
+  function drawFrame(a) {
+    // Moving from a heading note straight onto a nav one leaves that note's
+    // fracture painted on the layer above; nothing else clears it, because a
+    // frame never touches that canvas.
+    if (crackBox) { clearBox(cracks.ctx, crackBox); crackBox = null; }
+    if (a.phase === 'hover') {
+      a.inset += (FRAME_REST - a.inset) * 0.18;
+    } else if (a.phase === 'retract') {
+      a.inset += (0 - a.inset) * 0.22;
+      if (a.inset < 0.002) { active = null; wipe(); return; }
+    } else if (a.phase === 'burst') {
+      const t = Math.min(1, (performance.now() - a.t0) / FRAME_MS);
+      a.inset = a.from + (0.5 - a.from) * easeOut(t);
+      if (t >= 1) {
+        // The band has closed over the whole viewport, so handing the ground
+        // back to the body underneath cannot be seen.
+        settle();
+        active = null;
+        return;
+      }
+    }
+
+    const g = ground.ctx;
+    g.clearRect(0, 0, vw, vh);
+    g.fillStyle = a.ground;
+    const ix = Math.min(snap(a.inset * vw), Math.ceil(vw / 2));
+    const iy = Math.min(snap(a.inset * vh), Math.ceil(vh / 2));
+    g.fillRect(0, 0, vw, iy);
+    g.fillRect(0, vh - iy, vw, iy);
+    g.fillRect(0, iy, ix, vh - iy * 2);
+    g.fillRect(vw - ix, iy, ix, vh - iy * 2);
+    groundBox = { x: 0, y: 0, w: vw, h: vh };
+    run();
+  }
+
   function draw() {
     frame = 0;
     if (!active) return;
     const a = active;
     const o = originOf(a.note);
+
+    if (a.mode === 'frame') { drawFrame(a); return; }
 
     if (a.phase === 'hover') {
       a.reach += (HOVER_REACH - a.reach) * 0.16;

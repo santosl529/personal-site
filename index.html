@@ -269,21 +269,33 @@
 
   /* A note appears beside a nav word when you point at the word, tinted to
      that section's song. The word still navigates; the note beside it changes
-     the site — two targets, one row. The note's space is held open even when
-     it is invisible, so the bar does not shuffle as the pointer moves along
-     it. Nav notes exist only where there is a real pointer to hover with; on
-     touch the section headings are the way in. */
-  .nav-brand,.nav-item{display:flex;align-items:center;gap:7px}
+     the site — two targets, one row. The note has no width until it is wanted,
+     so it opens a gap for itself as it arrives rather than sitting on reserved
+     space. Nav notes exist only where there is a real pointer to hover with;
+     on touch the section headings are the way in. */
+  .nav-brand,.nav-item{display:flex;align-items:center}
   .note.note-nav{display:none}
   @media (hover:hover) and (pointer:fine){
     .note.note-nav{
-      display:inline-flex;width:18px;height:18px;
+      display:inline-flex;width:0;height:18px;margin-left:0;overflow:hidden;
       opacity:0;scale:.55;
-      transition:opacity .18s ease,scale .2s cubic-bezier(.2,.9,.3,1.5);
+      transition:width .2s ease,margin-left .2s ease,opacity .16s ease,
+                 scale .2s cubic-bezier(.2,.9,.3,1.5);
     }
-    .note.note-nav svg{width:9px;height:11px}
-    .nav-brand:hover .note-nav,.nav-item:hover .note-nav,
-    .nav-brand:focus-within .note-nav,.nav-item:focus-within .note-nav{opacity:1;scale:1}
+    .note.note-nav svg{width:9px;height:11px;flex:0 0 auto}
+    .nav-brand:hover .note-nav,.nav-item:hover .note-nav{
+      width:18px;margin-left:7px;opacity:1;scale:1;
+    }
+  }
+  /* Keyboard focus opens it as well, but a click must not leave it stuck open
+     after the pointer has moved on — :focus-visible is not set by a mouse
+     press, where :focus-within was. Kept in its own block so that a browser
+     without :has() still gets the hover rule above. */
+  @media (hover:hover) and (pointer:fine){
+    .nav-brand:has(:focus-visible) .note-nav,
+    .nav-item:has(:focus-visible) .note-nav{
+      width:18px;margin-left:7px;opacity:1;scale:1;
+    }
   }
 
   .note-hint{
