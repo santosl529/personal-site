@@ -325,6 +325,20 @@ function init() {
     stagedEls = [];
   }
 
+  // The note for the palette you are already in is not something to press: it
+  // is where you are. Disabling it also stops its preview, since a browser
+  // sends no pointer events to a disabled control — which is right, there is
+  // nothing to preview. Both the heading note and the nav note for that song
+  // go together.
+  function syncNotes() {
+    const current = root.getAttribute('data-theme') || 'fg';
+    for (const n of notes) {
+      const here = token(n) === current;
+      n.disabled = here;
+      n.setAttribute('aria-pressed', String(here));
+    }
+  }
+
   function commit(note) {
     const t = token(note);
     // The .65s color ease exists for this moment and no other, so it is turned
@@ -337,7 +351,7 @@ function init() {
     }, BURST_MS + 900);
     if (t === 'fg') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', t);
-    notes.forEach(n => n.setAttribute('aria-pressed', String(n === note)));
+    syncNotes();
   }
 
   function fire(note) {
@@ -543,15 +557,23 @@ function init() {
     if (!frame) frame = requestAnimationFrame(draw);
   }
 
+  syncNotes();
+
   notes.forEach(note => {
     // Hover previews; focus does the same so the keyboard path is not a
     // second-class one.
+    // Guarded rather than trusting the disabled state to swallow the event: a
+    // browser withholds pointer events from a disabled control, but a
+    // programmatic dispatch reaches it regardless.
     ['pointerenter', 'focus'].forEach(ev =>
-      note.addEventListener(ev, () => { if (!reduceMotion.matches) begin(note); })
+      note.addEventListener(ev, () => {
+        if (note.disabled || reduceMotion.matches) return;
+        begin(note);
+      })
     );
     ['pointerleave', 'blur'].forEach(ev =>
       note.addEventListener(ev, () => release(note))
     );
-    note.addEventListener('click', () => fire(note));
+    note.addEventListener('click', () => { if (!note.disabled) fire(note); });
   });
 }

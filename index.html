@@ -253,6 +253,10 @@
   .note:hover::before,.note:focus-visible::before{opacity:.9}
   .note:focus-visible{outline:none}
   .note[aria-pressed="true"]::before{opacity:.95}
+  /* The note whose song is already playing keeps its ring turned up — that is
+     what marks it as where you are — but stops behaving like a button. */
+  .note:disabled{cursor:default}
+  .note:disabled:hover,.note:disabled:focus-visible{transform:none}
 
   .note-hero{width:46px;height:46px}
   .note-hero svg{width:21px;height:26px}
@@ -286,6 +290,8 @@
     .nav-brand:hover .note-nav,.nav-item:hover .note-nav{
       width:18px;margin-left:7px;opacity:1;scale:1;
     }
+    /* Still opens its gap so the row does not jump, but reads as inactive. */
+    .nav-brand:hover .note-nav:disabled,.nav-item:hover .note-nav:disabled{opacity:.45}
   }
   /* Keyboard focus opens it as well, but a click must not leave it stuck open
      after the pointer has moved on — :focus-visible is not set by a mouse
