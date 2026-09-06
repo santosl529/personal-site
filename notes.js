@@ -23,13 +23,9 @@
 
 const CELL = 5;             // pixel grid the cracks and the ground snap to
 const HOVER_REACH = 260;    // how far cracks creep while hovering
-const CRACK_MS = 520;       // click: cracks race to the far corner
-const GROUND_DELAY = 120;   // click: the ground follows the cracks out
-const GROUND_MS = 640;
-const FADE_MS = 520;
 const EDGE_SEEDS = 16;      // fractures spaced around the rim of the screen
 const EDGE_REACH = 0.19;    // hover: how far in they creep, of the short side
-const EDGE_MS = 680;        // click: how long they take to close over the screen
+const BURST_MS = 680;       // click: how long the new ground takes to arrive
 // Blocks whose colour is staged to the closing front. Anything inside one of
 // these inherits its colour, so it turns with its block rather than needing a
 // delay of its own.
@@ -156,7 +152,6 @@ function init() {
     return { el: c, ctx: c.getContext('2d') };
   }
   const ground = layer('bloom-ground');   // behind the content
-  const cracks = layer('bloom-cracks');   // over everything
 
   // An offscreen probe wearing a [data-theme] so a song's palette can be read
   // straight out of the stylesheet rather than restated here in JS.
@@ -177,7 +172,7 @@ function init() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     vw = window.innerWidth;
     vh = window.innerHeight;
-    for (const l of [ground, cracks]) {
+    for (const l of [ground]) {
       l.el.width = Math.round(vw * dpr);
       l.el.height = Math.round(vh * dpr);
       // The bitmap is in device pixels; the box has to stay in CSS pixels, or
@@ -289,28 +284,36 @@ function init() {
   let shiftTimer = 0;
   let stagedEls = [];
 
-  // When does the closing front reach this point? The bands come in from all
-  // four sides, so a point is covered as soon as the nearest one arrives —
-  // hence the smaller of the two axis fractions. inset runs 0.5 * t^1.6 over
-  // EDGE_MS, so inverting it gives the moment, and that becomes the element's
-  // transition-delay.
-  function frontReaches(cx, cy) {
-    const fx = Math.min(cx, vw - cx) / vw;
-    const fy = Math.min(cy, vh - cy) / vh;
-    const need = Math.max(0, Math.min(fx, fy));
-    return Math.min(1, Math.pow(need / 0.5, 1 / 1.6)) * EDGE_MS;
+  // When does the arriving ground reach this point? A nav note closes bands in
+  // from all four sides, so a point is covered as soon as the nearest one gets
+  // there. A heading note grows a disc out of itself, so it is the distance
+  // from the note. Both run their front on t^1.6 over BURST_MS, so inverting
+  // that gives the moment, which becomes the element's transition-delay.
+  function frontReaches(a, o, cx, cy) {
+    let need;
+    if (a.mode === 'frame') {
+      need = Math.min(Math.min(cx, vw - cx) / vw, Math.min(cy, vh - cy) / vh) / 0.5;
+    } else {
+      need = Math.hypot(cx - o.x, cy - o.y) / coverRadius(o);
+    }
+    return Math.min(1, Math.pow(Math.max(0, need), 1 / 1.6)) * BURST_MS;
   }
 
-  function stageToFront() {
+  // Every element, not a chosen few: anything with a colour of its own that was
+  // left out turned at the click while the block around it waited, which is
+  // exactly the mismatch the staging exists to remove.
+  function stageToFront(a, o) {
     clearStaging();
-    for (const el of document.querySelectorAll(STAGED)) {
+    for (const el of document.body.querySelectorAll('*')) {
+      if (el.tagName === 'CANVAS' || el.tagName === 'SCRIPT') continue;
       const r = el.getBoundingClientRect();
-      // Off-screen blocks would be staged against a front they never see, and
-      // would then sit on a stale delay when they scroll in.
+      if (!r.width || !r.height) continue;
+      // Off-screen elements would be staged against a front they never see, and
+      // would then sit on a stale delay once they scrolled in.
       if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) continue;
-      // Half the fade is spent before arrival and half after, so the block
-      // is mid-flip exactly as the front crosses it.
-      const ms = frontReaches(r.left + r.width / 2, r.top + r.height / 2) - 130;
+      // Half the fade is spent before arrival and half after, so an element is
+      // mid-flip exactly as the front crosses it.
+      const ms = frontReaches(a, o, r.left + r.width / 2, r.top + r.height / 2) - 130;
       el.style.transitionDelay = Math.max(0, Math.round(ms)) + 'ms';
       stagedEls.push(el);
     }
@@ -330,7 +333,7 @@ function init() {
     shiftTimer = setTimeout(() => {
       root.classList.remove('theme-shift', 'theme-staged');
       clearStaging();
-    }, EDGE_MS + 900);
+    }, BURST_MS + 900);
     if (t === 'fg') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', t);
     notes.forEach(n => n.setAttribute('aria-pressed', String(n === note)));
@@ -345,15 +348,14 @@ function init() {
     // Pin the ground the page has now, so committing the palette recolors the
     // type and the rules while the old floor stays put for the sweep to erase.
     document.body.style.backgroundColor = readVar(root, '--bg');
-    // A heading's fracture bursts from under your cursor, so its type can turn
-    // with it. The nav front closes from the rim and arrives at different parts
-    // of the page at different times, so the type is staged to it: each block
-    // is told to wait until the front actually reaches it. The palette is still
-    // committed at once — only the transitions are held back.
-    if (isFrame(active.note)) { stageToFront(); root.classList.add('theme-staged'); }
+    // Both kinds stage their recolour to the ground arriving, each from its own
+    // front — the rim closing in, or the disc growing out of the note. The
+    // palette is still committed at once; only the transitions are held back.
+    stageToFront(active, originOf(active.note));
+    root.classList.add('theme-staged');
     commit(active.note);
     active.phase = 'burst';
-    active.from = active.inset;
+    active.from = active.mode === 'frame' ? active.inset : active.reach;
     active.t0 = performance.now();
     run();
   }
@@ -365,9 +367,8 @@ function init() {
   }
 
   function wipe() {
-    cracks.ctx.clearRect(0, 0, vw, vh);
     ground.ctx.clearRect(0, 0, vw, vh);
-    crackBox = groundBox = null;
+    groundBox = null;
   }
 
   const easeOut = t => 1 - Math.pow(1 - t, 3);
@@ -375,7 +376,6 @@ function init() {
   // Clearing the whole viewport twice a frame is most of a frame's work when
   // the fracture only ever covers a few hundred pixels around one note. Each
   // layer remembers the box it painted and clears just that.
-  let crackBox = null;
   let groundBox = null;
 
   function boxAround(o, r) {
@@ -399,11 +399,6 @@ function init() {
   }
 
   function drawEdge(a) {
-    // Moving from a heading note straight onto a nav one leaves that note's
-    // fracture painted on the layer above; nothing else clears it, because an
-    // edge fracture never touches that canvas.
-    if (crackBox) { clearBox(cracks.ctx, crackBox); crackBox = null; }
-
     const far = Math.hypot(vw, vh);
     const rest = Math.min(vw, vh) * EDGE_REACH;
 
@@ -418,7 +413,7 @@ function init() {
       a.thick = CELL * 2;
       if (a.reach < 1) { active = null; wipe(); return; }
     } else if (a.phase === 'burst') {
-      const t = Math.min(1, (performance.now() - a.t0) / EDGE_MS);
+      const t = Math.min(1, (performance.now() - a.t0) / BURST_MS);
       // The front closes from the rim, and the fractures ride just ahead of it
       // rather than racing the whole screen. Letting them run to the far corner
       // meant that by mid-collapse they had converged over the middle and the
@@ -474,74 +469,69 @@ function init() {
 
     if (a.mode === 'frame') { drawEdge(a); return; }
 
+    const R = coverRadius(o);
+
     if (a.phase === 'hover') {
       a.reach += (HOVER_REACH - a.reach) * 0.16;
+      a.spread = 0;
+      a.thick = 1;
     } else if (a.phase === 'retract') {
       a.reach += (0 - a.reach) * 0.22;
       if (a.reach < 1) { active = null; wipe(); return; }
     } else if (a.phase === 'burst') {
-      const R = coverRadius(o);
-      const t = performance.now() - a.t0;
-      a.reach = Math.max(a.reach, easeOut(Math.min(1, t / CRACK_MS)) * R);
-      a.spread = easeOut(Math.max(0, Math.min(1, (t - GROUND_DELAY) / GROUND_MS))) * R;
-      if (a.spread >= R) {
-        // The new ground now covers the viewport, so handing it back to the
-        // body and clearing the layer is invisible. Only the cracks are left
-        // to fade.
+      // The same shape of move as a nav note, run outward instead of inward:
+      // the new ground grows out of the note on t^1.6, and the fracture rides
+      // just ahead of it rather than racing off to the corner on its own clock.
+      const t = Math.min(1, (performance.now() - a.t0) / BURST_MS);
+      a.spread = R * Math.pow(t, 1.6);
+      a.reach = Math.max(a.from, a.spread + HOVER_REACH);
+      a.thick = 1 + 1.6 * t;
+      if (t >= 1) {
+        // The ground covers the viewport, so handing it back to the body is
+        // invisible and there is nothing left to fade out.
         settle();
-        a.spread = 0;
-        a.phase = 'fade';
-        a.t0 = performance.now();
-      }
-    } else if (a.phase === 'fade') {
-      a.alpha = 1 - Math.min(1, (performance.now() - a.t0) / FADE_MS);
-      if (a.alpha <= 0) { active = null; wipe(); return; }
-    }
-
-    // --- the flood, behind the content (click only) ---
-    if (a.spread > 0 || groundBox) {
-      const g = ground.ctx;
-      clearBox(g, groundBox);
-      groundBox = null;
-      if (a.spread > 0) {
-        g.fillStyle = a.ground;
-        const r = a.spread;
-        const top = Math.floor((o.y - r) / CELL) * CELL;
-        for (let gy = top; gy <= o.y + r; gy += CELL) {
-          const dy = gy + CELL / 2 - o.y;
-          const inside = r * r - dy * dy;
-          if (inside <= 0) continue;
-          const wob = jitter[Math.abs(gy / CELL | 0) % jitter.length];
-          const hw = Math.max(0, snap(Math.sqrt(inside) + wob));
-          g.fillRect(snap(o.x - hw), gy, hw * 2, CELL);
-        }
-        groundBox = boxAround(o, r);
+        active = null;
+        return;
       }
     }
 
-    // --- the cracks, over everything ---
-    const c = cracks.ctx;
-    clearBox(c, crackBox);
-    c.fillStyle = a.crack;
-    crackBox = boxAround(o, a.reach);
+    // Both layers of the move are drawn behind the content now, the way a nav
+    // note's are: the fracture goes down first and the ground follows over it,
+    // so the crack leads the colour in and is swallowed by it. It used to be
+    // painted above everything on its own canvas, where it cut across the type.
+    const g = ground.ctx;
+    clearBox(g, groundBox);
+    groundBox = boxAround(o, Math.max(a.reach, a.spread));
+
+    g.fillStyle = a.crack;
     for (const shape of a.shapes) {
       // Shapes are ordered along their own path, so one past the reach means
       // the rest of that branch is too — and a branch that starts beyond the
-      // reach is skipped whole. Most of a note's ~80 branches are, on a hover.
+      // reach is skipped whole. Most of a note's branches are, on a hover.
       if (shape.pts.length && shape.pts[0].d > a.reach) continue;
       for (const p of shape.pts) {
         if (p.d > a.reach) break;
         const tip = Math.min(1, (a.reach - p.d) / 30);
-        c.globalAlpha = a.alpha * shape.alpha * (0.35 + 0.65 * tip);
-        const size = p.heavy ? CELL * 2 : CELL;
-        c.fillRect(
-          Math.round((o.x + p.x) / CELL) * CELL,
-          Math.round((o.y + p.y) / CELL) * CELL,
-          size, size
-        );
+        g.globalAlpha = shape.alpha * (0.35 + 0.65 * tip);
+        const size = Math.round((p.heavy ? CELL * 2 : CELL) * a.thick);
+        g.fillRect(snap(o.x + p.x), snap(o.y + p.y), size, size);
       }
     }
-    c.globalAlpha = 1;
+    g.globalAlpha = 1;
+
+    if (a.spread > 0) {
+      g.fillStyle = a.ground;
+      const r = a.spread;
+      const top = Math.floor((o.y - r) / CELL) * CELL;
+      for (let gy = top; gy <= o.y + r; gy += CELL) {
+        const dy = gy + CELL / 2 - o.y;
+        const inside = r * r - dy * dy;
+        if (inside <= 0) continue;
+        const wob = jitter[Math.abs(gy / CELL | 0) % jitter.length];
+        const hw = Math.max(0, snap(Math.sqrt(inside) + wob));
+        g.fillRect(snap(o.x - hw), gy, hw * 2, CELL);
+      }
+    }
     run();
   }
 

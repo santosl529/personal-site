@@ -314,9 +314,7 @@
      its box falls back to the bitmap size, which is vw*dpr. Pin the CSS
      size explicitly or everything draws scaled and displaced by the pixel
      ratio on any non-1x screen. */
-  #bloom-ground,#bloom-cracks{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;display:block}
-  #bloom-ground{z-index:-1}
-  #bloom-cracks{z-index:200}
+  #bloom-ground{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;display:block;z-index:-1}
 
   /* --- reveal animation --- */
   .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
