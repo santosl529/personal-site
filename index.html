@@ -76,7 +76,9 @@
 
   /* --- nav --- */
   nav{
-    position:fixed;top:0;left:0;right:0;z-index:100;
+    /* Above the notes (201) and the crack layer (200): a note scrolling past
+       the header has to pass under it, not clip through it. */
+    position:fixed;top:0;left:0;right:0;z-index:300;
     display:flex;justify-content:space-between;align-items:center;
     padding:22px max(28px, calc((100% - 1000px) / 2));
     background:color-mix(in srgb, var(--bg) 82%, transparent);
@@ -217,9 +219,9 @@
   footer{text-align:center;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--mist);padding:26px 0 50px}
 
   /* --- song notes --- */
-  /* The notes are the only color on a monochrome page, which is most of what
-     tells you they are worth touching. The rest is hover: the note swells,
-     a ring appears, and colored cracks creep out of it across the page. */
+  /* The notes are the only color on a monochrome page, and each is drawn as a
+     circled note so it reads as a control before you touch it. On hover it
+     swells, the ring brightens, and colored cracks creep out across the page. */
   .name-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .h2-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
   .h2-row h2{margin-bottom:0}
@@ -239,15 +241,18 @@
   .note[data-song="brass"]{--note:var(--brass)}
   .note[data-song="tomato"]{--note:var(--tomato)}
   .note[data-song="fg"]{--note:var(--fg)}
+  /* The ring is always drawn, on every note. It used to appear only on hover,
+     which meant the affordance was invisible until you had already found it.
+     Hover brightens it rather than introducing it. */
   .note::before{
     content:"";position:absolute;inset:0;border-radius:50%;
-    border:1px solid currentColor;opacity:0;transform:scale(.55);
-    transition:opacity .25s ease,transform .25s ease;
+    border:1px solid currentColor;opacity:.4;
+    transition:opacity .25s ease;
   }
   .note:hover,.note:focus-visible{transform:scale(1.2)}
-  .note:hover::before,.note:focus-visible::before{opacity:.55;transform:scale(1)}
+  .note:hover::before,.note:focus-visible::before{opacity:.9}
   .note:focus-visible{outline:none}
-  .note[aria-pressed="true"]::before{opacity:.85;transform:scale(1)}
+  .note[aria-pressed="true"]::before{opacity:.95}
 
   .note-hero{width:46px;height:46px}
   .note-hero svg{width:21px;height:26px}
@@ -271,9 +276,9 @@
   /* The contact section is centred, so its heading row has to be too. */
   .contact .h2-row{justify-content:center}
 
-  /* Two layers. The ground is revealed from behind the content, so text and
-     cards ride over the new color as it sweeps past; the cracks are drawn
-     over everything, above the nav. The notes themselves sit above both. */
+  /* Two layers. The ground sits behind the content, so text and cards ride
+     over the new color as it sweeps past; the cracks are drawn over the
+     content. The notes sit above the cracks, and the nav above all of them. */
   /* A canvas is a replaced element, so inset:0 alone does NOT stretch it —
      its box falls back to the bitmap size, which is vw*dpr. Pin the CSS
      size explicitly or everything draws scaled and displaced by the pixel
