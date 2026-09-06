@@ -30,6 +30,11 @@ const FADE_MS = 520;
 const EDGE_SEEDS = 16;      // fractures spaced around the rim of the screen
 const EDGE_REACH = 0.19;    // hover: how far in they creep, of the short side
 const EDGE_MS = 680;        // click: how long they take to close over the screen
+// Blocks whose colour is staged to the closing front. Anything inside one of
+// these inherits its colour, so it turns with its block rather than needing a
+// delay of its own.
+const STAGED = 'h1,h2,h3,p,li,.sec-label,.eyebrow,.tagline,.note-hint,.when,' +
+               '.card,.beyond-card,.staff,.tag,footer,nav a';
 
 const root = document.documentElement;
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -282,6 +287,39 @@ function init() {
   }
 
   let shiftTimer = 0;
+  let stagedEls = [];
+
+  // When does the closing front reach this point? The bands come in from all
+  // four sides, so a point is covered as soon as the nearest one arrives —
+  // hence the smaller of the two axis fractions. inset runs 0.5 * t^1.6 over
+  // EDGE_MS, so inverting it gives the moment, and that becomes the element's
+  // transition-delay.
+  function frontReaches(cx, cy) {
+    const fx = Math.min(cx, vw - cx) / vw;
+    const fy = Math.min(cy, vh - cy) / vh;
+    const need = Math.max(0, Math.min(fx, fy));
+    return Math.min(1, Math.pow(need / 0.5, 1 / 1.6)) * EDGE_MS;
+  }
+
+  function stageToFront() {
+    clearStaging();
+    for (const el of document.querySelectorAll(STAGED)) {
+      const r = el.getBoundingClientRect();
+      // Off-screen blocks would be staged against a front they never see, and
+      // would then sit on a stale delay when they scroll in.
+      if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) continue;
+      // Half the fade is spent before arrival and half after, so the block
+      // is mid-flip exactly as the front crosses it.
+      const ms = frontReaches(r.left + r.width / 2, r.top + r.height / 2) - 130;
+      el.style.transitionDelay = Math.max(0, Math.round(ms)) + 'ms';
+      stagedEls.push(el);
+    }
+  }
+
+  function clearStaging() {
+    for (const el of stagedEls) el.style.removeProperty('transition-delay');
+    stagedEls = [];
+  }
 
   function commit(note) {
     const t = token(note);
@@ -289,7 +327,10 @@ function init() {
     // on for the length of the swap and then taken off again.
     root.classList.add('theme-shift');
     clearTimeout(shiftTimer);
-    shiftTimer = setTimeout(() => root.classList.remove('theme-shift'), 800);
+    shiftTimer = setTimeout(() => {
+      root.classList.remove('theme-shift', 'theme-staged');
+      clearStaging();
+    }, EDGE_MS + 900);
     if (t === 'fg') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', t);
     notes.forEach(n => n.setAttribute('aria-pressed', String(n === note)));
@@ -304,6 +345,12 @@ function init() {
     // Pin the ground the page has now, so committing the palette recolors the
     // type and the rules while the old floor stays put for the sweep to erase.
     document.body.style.backgroundColor = readVar(root, '--bg');
+    // A heading's fracture bursts from under your cursor, so its type can turn
+    // with it. The nav front closes from the rim and arrives at different parts
+    // of the page at different times, so the type is staged to it: each block
+    // is told to wait until the front actually reaches it. The palette is still
+    // committed at once — only the transitions are held back.
+    if (isFrame(active.note)) { stageToFront(); root.classList.add('theme-staged'); }
     commit(active.note);
     active.phase = 'burst';
     active.from = active.inset;

@@ -386,6 +386,12 @@
      moment the pin came off the old ground would fade back in over .65s —
      which read as the page flipping back before the theme took. */
   .theme-shift body{transition:color .65s ease}
+  /* When the swap is staged to a closing front, each block is already waiting
+     its turn, so the crossfade itself is short — a block flips as the front
+     crosses it rather than drifting for most of the sweep. The body override
+     is repeated at matching weight so the ground still snaps. */
+  .theme-shift.theme-staged *{transition:color .26s ease,background-color .26s ease,border-color .26s ease}
+  .theme-shift.theme-staged body{transition:color .26s ease}
 
   @media(prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important}
