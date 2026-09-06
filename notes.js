@@ -256,10 +256,13 @@ function init() {
       crack: pal.crack,
       ground: pal.ground,
       mode: isFrame(note) ? 'frame' : 'crack',
-      // A song's rim fractures are drawn in the ground it is bringing. The
-      // reset note's ground is the paper itself, which on a white page is
-      // nothing at all, so it fractures in ink and lets the paper follow.
-      edgeInk: token(note) === 'fg' ? pal.crack : pal.ground,
+      // Rim fractures take the note's own swatch, the same colour a heading
+      // fracture is drawn in, so the two previews read as one idea. The pale
+      // ground the song is bringing follows behind them as the solid front —
+      // drawing the fractures in that ground instead left them barely above
+      // the paper, and invisible outright for the reset note, whose ground is
+      // the paper.
+      edgeInk: pal.crack,
       shapes: isFrame(note) ? null : shapesFor(note),
       reach: active && active.note === note ? active.reach : 0,
       inset: 0,
