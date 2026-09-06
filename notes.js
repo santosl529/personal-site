@@ -58,7 +58,7 @@ function rng(seed) {
 // thins out as it travels.
 function makeCracks(seed, maxLen) {
   const rand = rng(seed);
-  const cracks = [];
+  const shapes = [];
   const TRUNKS = 7;
 
   function walk(x, y, angle, startD, len, depth) {
@@ -66,27 +66,25 @@ function makeCracks(seed, maxLen) {
     let d = startD;
     const end = startD + len;
     while (d < end) {
-      angle += (rand() - 0.5) * 0.55;
+      angle += (rand() - 0.5) * 0.5;
       const step = CELL * (1 + Math.floor(rand() * 2));
       x += Math.cos(angle) * step;
       y += Math.sin(angle) * step;
       d += step;
-      // Thin right at the note so the glyph you are pointing at still reads,
-      // thick just outside it, thinning again as the crack travels.
-      pts.push({ x, y, d, heavy: depth === 0 && d > 18 && d < 75 });
-      if (depth < 2 && rand() < 0.045 && end - d > 40) {
-        const turn = (rand() < 0.5 ? -1 : 1) * (0.5 + rand() * 0.6);
-        walk(x, y, angle + turn, d, (end - d) * 0.65, depth + 1);
+      pts.push({ x, y, d });
+      if (depth < 2 && rand() < 0.05 && end - d > 40) {
+        const turn = (rand() < 0.5 ? -1 : 1) * (0.4 + rand() * 0.6);
+        walk(x, y, angle + turn, d, (end - d) * 0.6, depth + 1);
       }
     }
-    cracks.push({ pts, alpha: depth === 0 ? 1 : 0.6 });
+    shapes.push(pts);
   }
 
   for (let i = 0; i < TRUNKS; i++) {
     const angle = (i / TRUNKS) * Math.PI * 2 + rand() * 0.7;
     walk(0, 0, angle, 0, maxLen * (0.6 + rand() * 0.4), 0);
   }
-  return cracks;
+  return shapes;
 }
 
 // Fractures for a nav note: instead of one origin, a set of them spaced around
@@ -398,6 +396,23 @@ function init() {
     return edgeShapes;
   }
 
+  // Both fractures are drawn the same way: solid cells of one width, centred on
+  // the path, in the note's swatch. The heading fracture used to taper its
+  // alpha and switch cell size partway along, which read as a different kind of
+  // mark from the rim ones.
+  function paintFracture(g, shapes, ox, oy, reach, wdt) {
+    for (const pts of shapes) {
+      // Points run in order along their own path, so one past the reach means
+      // the rest of that branch is too, and a branch starting beyond it is
+      // skipped whole.
+      if (pts.length && pts[0].d > reach) continue;
+      for (const p of pts) {
+        if (p.d > reach) break;
+        g.fillRect(snap(ox + p.x) - wdt / 2, snap(oy + p.y) - wdt / 2, wdt, wdt);
+      }
+    }
+  }
+
   function drawEdge(a) {
     const far = Math.hypot(vw, vh);
     const rest = Math.min(vw, vh) * EDGE_REACH;
@@ -440,13 +455,7 @@ function init() {
     // against the white it is bringing — that is what lets the ink lead and
     // the paper swallow it, rather than black cells surviving on top.
     g.fillStyle = a.edgeInk;
-    const wdt = snap(a.thick) || CELL;
-    for (const pts of shapesForEdge()) {
-      for (const p of pts) {
-        if (p.d > a.reach) break;
-        g.fillRect(snap(p.x) - wdt / 2, snap(p.y) - wdt / 2, wdt, wdt);
-      }
-    }
+    paintFracture(g, shapesForEdge(), 0, 0, a.reach, snap(a.thick) || CELL);
 
     if (a.inset > 0) {
       g.fillStyle = a.ground;
@@ -474,7 +483,7 @@ function init() {
     if (a.phase === 'hover') {
       a.reach += (HOVER_REACH - a.reach) * 0.16;
       a.spread = 0;
-      a.thick = 1;
+      a.thick = CELL * 2;
     } else if (a.phase === 'retract') {
       a.reach += (0 - a.reach) * 0.22;
       if (a.reach < 1) { active = null; wipe(); return; }
@@ -485,7 +494,7 @@ function init() {
       const t = Math.min(1, (performance.now() - a.t0) / BURST_MS);
       a.spread = R * Math.pow(t, 1.6);
       a.reach = Math.max(a.from, a.spread + HOVER_REACH);
-      a.thick = 1 + 1.6 * t;
+      a.thick = CELL * (2 + 2 * t);
       if (t >= 1) {
         // The ground covers the viewport, so handing it back to the body is
         // invisible and there is nothing left to fade out.
@@ -504,20 +513,7 @@ function init() {
     groundBox = boxAround(o, Math.max(a.reach, a.spread));
 
     g.fillStyle = a.crack;
-    for (const shape of a.shapes) {
-      // Shapes are ordered along their own path, so one past the reach means
-      // the rest of that branch is too — and a branch that starts beyond the
-      // reach is skipped whole. Most of a note's branches are, on a hover.
-      if (shape.pts.length && shape.pts[0].d > a.reach) continue;
-      for (const p of shape.pts) {
-        if (p.d > a.reach) break;
-        const tip = Math.min(1, (a.reach - p.d) / 30);
-        g.globalAlpha = shape.alpha * (0.35 + 0.65 * tip);
-        const size = Math.round((p.heavy ? CELL * 2 : CELL) * a.thick);
-        g.fillRect(snap(o.x + p.x), snap(o.y + p.y), size, size);
-      }
-    }
-    g.globalAlpha = 1;
+    paintFracture(g, a.shapes, o.x, o.y, a.reach, snap(a.thick) || CELL);
 
     if (a.spread > 0) {
       g.fillStyle = a.ground;
