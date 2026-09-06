@@ -256,15 +256,17 @@ function init() {
     g.fillStyle = a.ground;
 
     // A crack is not just a colored line over the page — it opens onto the
-    // song's own background. Three cells wide along the crack path, painted on
-    // the layer behind the content so the type stays on top of it. Skipped
+    // song's own background. Five cells wide along the crack path, painted on
+    // the layer behind the content so the type stays on top of it. The band
+    // has to be broad: these grounds sit around 1.35:1 against the paper, so
+    // area is what makes it read, not contrast. Skipped
     // once the flood has been handed back to the body, where the page is
     // already this color and the band would be painting nothing.
     if (a.phase !== 'fade') {
       for (const shape of a.shapes) {
         for (const p of shape.pts) {
           if (p.d > a.reach) break;
-          g.fillRect(snap(o.x + p.x) - CELL, snap(o.y + p.y) - CELL, CELL * 3, CELL * 3);
+          g.fillRect(snap(o.x + p.x) - CELL * 2, snap(o.y + p.y) - CELL * 2, CELL * 5, CELL * 5);
         }
       }
     }
