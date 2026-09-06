@@ -51,10 +51,7 @@
     --theme:#C0341B; --theme-2:#A81563; --line:rgba(51,17,10,.16);
   }
   *{margin:0;padding:0;box-sizing:border-box}
-  /* A song sweeps in as a ground; the type and rules ease after it rather
-     than snapping. Rules below that declare their own transition re-state
-     these three properties so they keep easing too. */
-  *{transition:color .65s ease,background-color .65s ease,border-color .65s ease}
+
   html{scroll-behavior:smooth;scrollbar-width:none;scroll-padding-top:80px}
   body{
     background:var(--bg);
@@ -117,8 +114,7 @@
     border:1px solid var(--line);
     border-radius:14px;padding:22px 22px 24px;
     position:relative;overflow:hidden;
-    transition:transform .25s ease,border-color .65s ease,background-color .65s ease,color .65s ease;
-    will-change:transform;
+    transition:transform .25s ease,border-color .25s ease,background-color .25s ease;
   }
   .card::before{content:"";position:absolute;top:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,var(--theme),var(--theme-2))}
   .card:hover{transform:translateY(-4px);background:color-mix(in srgb, var(--fg) 5%, transparent);border-color:color-mix(in srgb, var(--fg) 24%, transparent)}
@@ -204,7 +200,7 @@
   /* Three tonal treatments rather than three hues, so the row still has
      rhythm while the site is monochrome. Only the third takes the song
      color, which keeps the flood from turning the whole row into one slab. */
-  .beyond-card{padding:26px;border-radius:14px;background:color-mix(in srgb, var(--fg) 4%, transparent);border:1px solid var(--line);color:var(--fg);transition:transform .25s ease,background-color .65s ease,border-color .65s ease,color .65s ease;will-change:transform}
+  .beyond-card{padding:26px;border-radius:14px;background:color-mix(in srgb, var(--fg) 4%, transparent);border:1px solid var(--line);color:var(--fg);transition:transform .25s ease}
   .beyond-card:hover{transform:translateY(-4px)}
   .beyond-card:nth-child(2){background:var(--theme-2);border-color:var(--theme-2);color:var(--bg)}
   .beyond-card:nth-child(3){background:color-mix(in srgb, var(--theme) 8%, transparent);border-color:color-mix(in srgb, var(--theme) 38%, transparent)}
@@ -233,7 +229,7 @@
     display:inline-flex;align-items:center;justify-content:center;
     width:34px;height:34px;padding:0;border:0;background:none;
     color:var(--note,var(--fg));cursor:pointer;
-    transition:transform .22s cubic-bezier(.2,.9,.3,1.5),color .65s ease;
+    transition:transform .22s cubic-bezier(.2,.9,.3,1.5);
   }
   .note svg{width:15px;height:19px;overflow:visible}
   /* The notes keep their song color even while the page is monochrome —
@@ -287,7 +283,7 @@
   #bloom-cracks{z-index:200}
 
   /* --- reveal animation --- */
-  .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease,color .65s ease,background-color .65s ease,border-color .65s ease}
+  .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
   .reveal.in{opacity:1;transform:none}
 
   @media(max-width:760px){
@@ -301,6 +297,12 @@
     nav ul{gap:14px}
     .tagline{min-height:calc(1.4em * 3)}
   }
+  /* Applied to the root for the length of a song landing, and only then. As a
+     permanent `*` rule this made every color change on the page take .65s —
+     ordinary hover feedback included, which is what made the site feel slow.
+     Last in the sheet so it outranks the per-element transitions above. */
+  .theme-shift *{transition:color .65s ease,background-color .65s ease,border-color .65s ease}
+
   @media(prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important}
     .reveal{opacity:1;transform:none}

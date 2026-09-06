@@ -113,9 +113,14 @@ function init() {
   probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;left:-9999px';
   document.body.appendChild(probe);
 
+  // Declared above resize(), which clears it — resize runs once during init,
+  // and a const is in its temporal dead zone until its declaration does.
+  const shapeCache = new Map();
+
   let vw = 0;
   let vh = 0;
   function resize() {
+    shapeCache.clear();   // shapes are generated to the viewport diagonal
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     vw = window.innerWidth;
     vh = window.innerHeight;
@@ -166,16 +171,27 @@ function init() {
     return Math.hypot(Math.max(o.x, vw - o.x), Math.max(o.y, vh - o.y));
   }
 
+  // A note's fracture is deterministic, so it only has to be generated once.
+  // It was being rebuilt on every hover: ~2800 points, of which the ~290 inside
+  // the hover reach were all that ever got drawn.
+  function shapesFor(note) {
+    let s = shapeCache.get(note);
+    if (!s) {
+      s = makeCracks(notes.indexOf(note) * 9176 + 17, Math.hypot(vw, vh));
+      shapeCache.set(note, s);
+    }
+    return s;
+  }
+
   function begin(note) {
     if (active && active.note === note && active.phase !== 'fade') return;
-    const seed = notes.indexOf(note) * 9176 + 17;
     const pal = paletteOf(note);
     active = {
       note,
       phase: 'hover',
       crack: pal.crack,
       ground: pal.ground,
-      shapes: makeCracks(seed, Math.hypot(vw, vh)),
+      shapes: shapesFor(note),
       reach: active && active.note === note ? active.reach : 0,
       spread: 0,
       alpha: 1,
@@ -191,8 +207,15 @@ function init() {
     }
   }
 
+  let shiftTimer = 0;
+
   function commit(note) {
     const t = token(note);
+    // The .65s color ease exists for this moment and no other, so it is turned
+    // on for the length of the swap and then taken off again.
+    root.classList.add('theme-shift');
+    clearTimeout(shiftTimer);
+    shiftTimer = setTimeout(() => root.classList.remove('theme-shift'), 800);
     if (t === 'fg') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', t);
     notes.forEach(n => n.setAttribute('aria-pressed', String(n === note)));
@@ -216,9 +239,31 @@ function init() {
   function settle() {
     document.body.style.removeProperty('background-color');
     ground.ctx.clearRect(0, 0, vw, vh);
+    groundBox = null;
+  }
+
+  function wipe() {
+    cracks.ctx.clearRect(0, 0, vw, vh);
+    ground.ctx.clearRect(0, 0, vw, vh);
+    crackBox = groundBox = null;
   }
 
   const easeOut = t => 1 - Math.pow(1 - t, 3);
+
+  // Clearing the whole viewport twice a frame is most of a frame's work when
+  // the fracture only ever covers a few hundred pixels around one note. Each
+  // layer remembers the box it painted and clears just that.
+  let crackBox = null;
+  let groundBox = null;
+
+  function boxAround(o, r) {
+    const pad = r + CELL * 3;
+    return { x: o.x - pad, y: o.y - pad, w: pad * 2, h: pad * 2 };
+  }
+  function clearBox(ctx, box) {
+    if (!box) return;
+    ctx.clearRect(box.x, box.y, box.w, box.h);
+  }
 
   function draw() {
     frame = 0;
@@ -230,7 +275,7 @@ function init() {
       a.reach += (HOVER_REACH - a.reach) * 0.16;
     } else if (a.phase === 'retract') {
       a.reach += (0 - a.reach) * 0.22;
-      if (a.reach < 1) { active = null; cracks.ctx.clearRect(0, 0, vw, vh); return; }
+      if (a.reach < 1) { active = null; wipe(); return; }
     } else if (a.phase === 'burst') {
       const R = coverRadius(o);
       const t = performance.now() - a.t0;
@@ -247,48 +292,40 @@ function init() {
       }
     } else if (a.phase === 'fade') {
       a.alpha = 1 - Math.min(1, (performance.now() - a.t0) / FADE_MS);
-      if (a.alpha <= 0) { active = null; cracks.ctx.clearRect(0, 0, vw, vh); return; }
+      if (a.alpha <= 0) { active = null; wipe(); return; }
     }
 
-    // --- the new ground: a band along the fracture, then the flood ---
-    const g = ground.ctx;
-    g.clearRect(0, 0, vw, vh);
-    g.fillStyle = a.ground;
-
-    // A crack is not just a colored line over the page — it opens onto the
-    // song's own background. Five cells wide along the crack path, painted on
-    // the layer behind the content so the type stays on top of it. The band
-    // has to be broad: these grounds sit around 1.35:1 against the paper, so
-    // area is what makes it read, not contrast. Skipped
-    // once the flood has been handed back to the body, where the page is
-    // already this color and the band would be painting nothing.
-    if (a.phase !== 'fade') {
-      for (const shape of a.shapes) {
-        for (const p of shape.pts) {
-          if (p.d > a.reach) break;
-          g.fillRect(snap(o.x + p.x) - CELL * 2, snap(o.y + p.y) - CELL * 2, CELL * 5, CELL * 5);
+    // --- the flood, behind the content (click only) ---
+    if (a.spread > 0 || groundBox) {
+      const g = ground.ctx;
+      clearBox(g, groundBox);
+      groundBox = null;
+      if (a.spread > 0) {
+        g.fillStyle = a.ground;
+        const r = a.spread;
+        const top = Math.floor((o.y - r) / CELL) * CELL;
+        for (let gy = top; gy <= o.y + r; gy += CELL) {
+          const dy = gy + CELL / 2 - o.y;
+          const inside = r * r - dy * dy;
+          if (inside <= 0) continue;
+          const wob = jitter[Math.abs(gy / CELL | 0) % jitter.length];
+          const hw = Math.max(0, snap(Math.sqrt(inside) + wob));
+          g.fillRect(snap(o.x - hw), gy, hw * 2, CELL);
         }
-      }
-    }
-
-    if (a.spread > 0) {
-      const r = a.spread;
-      const top = Math.floor((o.y - r) / CELL) * CELL;
-      for (let gy = top; gy <= o.y + r; gy += CELL) {
-        const dy = gy + CELL / 2 - o.y;
-        const inside = r * r - dy * dy;
-        if (inside <= 0) continue;
-        const wob = jitter[Math.abs(gy / CELL | 0) % jitter.length];
-        const hw = Math.max(0, snap(Math.sqrt(inside) + wob));
-        g.fillRect(snap(o.x - hw), gy, hw * 2, CELL);
+        groundBox = boxAround(o, r);
       }
     }
 
     // --- the cracks, over everything ---
     const c = cracks.ctx;
-    c.clearRect(0, 0, vw, vh);
+    clearBox(c, crackBox);
     c.fillStyle = a.crack;
+    crackBox = boxAround(o, a.reach);
     for (const shape of a.shapes) {
+      // Shapes are ordered along their own path, so one past the reach means
+      // the rest of that branch is too — and a branch that starts beyond the
+      // reach is skipped whole. Most of a note's ~80 branches are, on a hover.
+      if (shape.pts.length && shape.pts[0].d > a.reach) continue;
       for (const p of shape.pts) {
         if (p.d > a.reach) break;
         const tip = Math.min(1, (a.reach - p.d) / 30);
