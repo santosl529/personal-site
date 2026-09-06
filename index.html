@@ -35,19 +35,19 @@
      not have. Set as [data-theme] rather than :root[data-theme] so the script
      can read a palette off an offscreen probe instead of duplicating it. */
   [data-theme="blue"]{
-    --bg:#E9EDFB; --fg:#0E1636; --mist:#545C86;
+    --bg:#DCE5FA; --fg:#0E1636; --mist:#545C86;
     --theme:#2743C9; --theme-2:#7C3AED; --line:rgba(14,22,54,.16);
   }
   [data-theme="jade"]{
-    --bg:#E4F3EB; --fg:#082419; --mist:#436C5B;
+    --bg:#D5EDDF; --fg:#082419; --mist:#436C5B;
     --theme:#0B7A4F; --theme-2:#0E7490; --line:rgba(8,36,25,.16);
   }
   [data-theme="brass"]{
-    --bg:#F7EEDA; --fg:#2A1D05; --mist:#6B5731;
+    --bg:#F5E7C6; --fg:#2A1D05; --mist:#6B5731;
     --theme:#8A6410; --theme-2:#B4460C; --line:rgba(42,29,5,.16);
   }
   [data-theme="tomato"]{
-    --bg:#FBEAE5; --fg:#33110A; --mist:#7A4A3E;
+    --bg:#FBE0D7; --fg:#33110A; --mist:#7A4A3E;
     --theme:#C0341B; --theme-2:#A81563; --line:rgba(51,17,10,.16);
   }
   *{margin:0;padding:0;box-sizing:border-box}
@@ -278,13 +278,23 @@
   /* Two layers. The ground is revealed from behind the content, so text and
      cards ride over the new color as it sweeps past; the cracks are drawn
      over everything, above the nav. The notes themselves sit above both. */
-  /* A canvas is a replaced element, so inset:0 alone does NOT stretch it —
-     its box falls back to the bitmap size, which is vw*dpr. Pin the CSS
-     size explicitly or everything draws scaled and displaced by the pixel
-     ratio on any non-1x screen. */
-  #bloom-ground,#bloom-cracks{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;display:block}
-  #bloom-ground{z-index:-1}
-  #bloom-cracks{z-index:200}
+  /* The fracture is not drawn — it is a hole. #theme-peek holds a second copy
+     of the page wearing the song's palette, stacked exactly over the real one
+     and clipped to the crack cells, so what shows through a crack is the
+     themed page itself: its ground, its type, its rules, in their real colors.
+     Growing that clip to cover the viewport is the click. */
+  #theme-peek{
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    z-index:199;pointer-events:none;overflow:hidden;
+    background:var(--bg);
+    contain:layout paint;
+  }
+  #theme-peek .peek-scroll{position:absolute;top:0;left:0;width:100%}
+  #theme-peek nav{position:absolute}
+  /* The real page is recolored only once it is fully hidden behind the peek.
+     Without this the shared .65s color transition would still be running when
+     the peek is pulled, and the swap would show as a fade. */
+  .theme-snap *{transition:none!important}
 
   /* --- reveal animation --- */
   .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease,color .65s ease,background-color .65s ease,border-color .65s ease}
