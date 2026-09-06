@@ -267,6 +267,25 @@
     animation:note-ping 2.4s ease-out 1.6s 2;
   }
 
+  /* A note appears beside a nav word when you point at the word, tinted to
+     that section's song. The word still navigates; the note beside it changes
+     the site — two targets, one row. The note's space is held open even when
+     it is invisible, so the bar does not shuffle as the pointer moves along
+     it. Nav notes exist only where there is a real pointer to hover with; on
+     touch the section headings are the way in. */
+  .nav-brand,.nav-item{display:flex;align-items:center;gap:7px}
+  .note.note-nav{display:none}
+  @media (hover:hover) and (pointer:fine){
+    .note.note-nav{
+      display:inline-flex;width:18px;height:18px;
+      opacity:0;scale:.55;
+      transition:opacity .18s ease,scale .2s cubic-bezier(.2,.9,.3,1.5);
+    }
+    .note.note-nav svg{width:9px;height:11px}
+    .nav-brand:hover .note-nav,.nav-item:hover .note-nav,
+    .nav-brand:focus-within .note-nav,.nav-item:focus-within .note-nav{opacity:1;scale:1}
+  }
+
   .note-hint{
     display:flex;align-items:center;gap:10px;margin-top:24px;
     font-family:'JetBrains Mono',monospace;font-size:.76rem;
@@ -372,12 +391,62 @@
 <div class="wrap">
 
   <nav>
-    <a class="logo" href="#">lorenzo<span>.</span></a>
+    <div class="nav-brand">
+      <a class="logo" href="#">lorenzo<span>.</span></a>
+      <button type="button" class="note note-nav" data-song="blue"
+              aria-label="Play a saxophone clip and turn the site blue">
+        <svg viewBox="0 0 16 20" aria-hidden="true" focusable="false">
+            <ellipse cx="5.4" cy="15.4" rx="4.6" ry="3.4" transform="rotate(-18 5.4 15.4)" fill="currentColor"/>
+            <path d="M9.7 14.6V3.1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <path d="M9.7 3.1c3.5 1.1 5.1 3.1 4.7 6.3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          </svg>
+      </button>
+    </div>
     <ul>
-      <li><a href="#projects">projects</a></li>
-      <li><a href="#work">work</a></li>
-      <li><a href="#life">life</a></li>
-      <li><a href="#contact">contact</a></li>
+      <li class="nav-item">
+        <a href="#projects">projects</a>
+        <button type="button" class="note note-nav" data-song="jade"
+                aria-label="Play a saxophone clip and turn the site green">
+          <svg viewBox="0 0 16 20" aria-hidden="true" focusable="false">
+            <ellipse cx="5.4" cy="15.4" rx="4.6" ry="3.4" transform="rotate(-18 5.4 15.4)" fill="currentColor"/>
+            <path d="M9.7 14.6V3.1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <path d="M9.7 3.1c3.5 1.1 5.1 3.1 4.7 6.3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </li>
+      <li class="nav-item">
+        <a href="#work">work</a>
+        <button type="button" class="note note-nav" data-song="brass"
+                aria-label="Play a saxophone clip and turn the site gold">
+          <svg viewBox="0 0 16 20" aria-hidden="true" focusable="false">
+            <ellipse cx="5.4" cy="15.4" rx="4.6" ry="3.4" transform="rotate(-18 5.4 15.4)" fill="currentColor"/>
+            <path d="M9.7 14.6V3.1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <path d="M9.7 3.1c3.5 1.1 5.1 3.1 4.7 6.3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </li>
+      <li class="nav-item">
+        <a href="#life">life</a>
+        <button type="button" class="note note-nav" data-song="tomato"
+                aria-label="Play a saxophone clip and turn the site red">
+          <svg viewBox="0 0 16 20" aria-hidden="true" focusable="false">
+            <ellipse cx="5.4" cy="15.4" rx="4.6" ry="3.4" transform="rotate(-18 5.4 15.4)" fill="currentColor"/>
+            <path d="M9.7 14.6V3.1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <path d="M9.7 3.1c3.5 1.1 5.1 3.1 4.7 6.3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </li>
+      <li class="nav-item">
+        <a href="#contact">contact</a>
+        <button type="button" class="note note-nav" data-song="fg"
+                aria-label="Clear the song and return the site to black and white">
+          <svg viewBox="0 0 16 20" aria-hidden="true" focusable="false">
+            <ellipse cx="5.4" cy="15.4" rx="4.6" ry="3.4" transform="rotate(-18 5.4 15.4)" fill="currentColor"/>
+            <path d="M9.7 14.6V3.1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <path d="M9.7 3.1c3.5 1.1 5.1 3.1 4.7 6.3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </li>
     </ul>
   </nav>
 
