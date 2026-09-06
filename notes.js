@@ -184,7 +184,16 @@ function init() {
   }
 
   function begin(note) {
-    if (active && active.note === note && active.phase !== 'fade') return;
+    if (active && active.note === note) {
+      // Already open, or running a click: leave it alone.
+      if (active.phase === 'hover' || active.phase === 'burst') return;
+      // Caught while closing. Reopen from wherever it had shrunk back to
+      // rather than swallowing the hover — bailing here left the phase on
+      // 'retract', so the fracture kept closing and the hover drew nothing.
+      // Every second hover did that, since the one after it started clean.
+      if (active.phase === 'retract') { active.phase = 'hover'; run(); return; }
+      // 'fade' falls through and starts fresh.
+    }
     const pal = paletteOf(note);
     active = {
       note,
