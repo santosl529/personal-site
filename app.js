@@ -68,7 +68,10 @@ function preloadPosters() {
 function renderCard(p) {
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.className = 'card reveal in';
+  // Not 'in': the card is dealt onto the page when it scrolls into view, the
+  // same as everything else that reveals. It was born revealed before, so it
+  // never animated at all.
+  btn.className = 'card reveal';
   btn.dataset.slug = p.slug;
   btn.setAttribute('aria-haspopup', 'dialog');
   btn.innerHTML = `
@@ -112,7 +115,13 @@ function ensureRowVisible(p) {
 function renderGrid() {
   const featured = PROJECTS.filter(p => p.featured);
   const rest = PROJECTS.filter(p => !p.featured);
-  featured.forEach(p => grid.appendChild(renderCard(p)));
+  // Observed after insertion, not inside renderCard: an IntersectionObserver
+  // watching a detached node has nothing to intersect with yet.
+  featured.forEach(p => {
+    const card = renderCard(p);
+    grid.appendChild(card);
+    if (window.revealWatch) window.revealWatch(card);
+  });
   if (rest.length) {
     rest.forEach(p => list.appendChild(renderRow(p)));
     listToggle.hidden = false;
