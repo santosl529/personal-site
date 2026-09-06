@@ -168,7 +168,10 @@ function init() {
   // Distance from the note to the furthest corner: how far the new ground has
   // to travel before the screen is covered.
   function coverRadius(o) {
-    return Math.hypot(Math.max(o.x, vw - o.x), Math.max(o.y, vh - o.y));
+    // Plus a margin. The flood's edge is jittered by a few cells, so stopping
+    // at the exact corner distance can leave slivers of the old ground showing
+    // at the moment the layer is handed back to the body.
+    return Math.hypot(Math.max(o.x, vw - o.x), Math.max(o.y, vh - o.y)) + CELL * 5;
   }
 
   // A note's fracture is deterministic, so it only has to be generated once.
