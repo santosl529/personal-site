@@ -577,6 +577,18 @@ function init() {
 
   syncNotes();
 
+  // A nav note opens on whichever side of its word the pointer is not on, so
+  // it never appears under the cursor. Decided once, as the pointer comes in:
+  // moving across the word to reach the note must not flip it away again.
+  for (const note of notes) {
+    if (!isFrame(note)) continue;
+    const item = note.parentElement;
+    item.addEventListener('pointerenter', e => {
+      const r = item.getBoundingClientRect();
+      item.dataset.noteSide = e.clientX < r.left + r.width / 2 ? 'right' : 'left';
+    });
+  }
+
   notes.forEach(note => {
     // Hover previews; focus does the same so the keyboard path is not a
     // second-class one.
