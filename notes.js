@@ -34,7 +34,10 @@ const STAGED = 'h1,h2,h3,p,li,.sec-label,.eyebrow,.tagline,.note-hint,.when,' +
 
 const root = document.documentElement;
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-const notes = Array.from(document.querySelectorAll('.note'));
+// Staff notes go on the end rather than in document order: a note's fracture
+// is seeded from its index, so interleaving them would reshape every heading's.
+const notes = [...document.querySelectorAll('.note'),
+               ...document.querySelectorAll('.staff-note')];
 
 if (notes.length) init();
 
@@ -193,6 +196,12 @@ function init() {
   // ground laid in a band around the edges of the screen, which closes over
   // the middle when the note is pressed.
   const isFrame = note => note.classList.contains('note-nav');
+  // The noteheads on the staff dividers. They have no hover preview — the
+  // fracture only starts when one is clicked — and, being SVG rather than
+  // buttons, they carry their inert state as an attribute instead of disabled.
+  const isStaff = note => note.classList.contains('staff-note');
+  const isInert = note =>
+    isStaff(note) ? note.getAttribute('aria-disabled') === 'true' : note.disabled;
 
   function readVar(el, name) {
     return getComputedStyle(el).getPropertyValue(name).trim();
@@ -211,7 +220,8 @@ function init() {
   }
 
   function originOf(note) {
-    const r = note.getBoundingClientRect();
+    // A staff note's box takes in its stem; the fracture leaves from the head.
+    const r = (note.querySelector('.staff-head') || note).getBoundingClientRect();
     // The radius comes back with it: the fracture leaves from the note but must
     // not be drawn inside the ring, or it fills the disc the note sits in and
     // the note stops reading as a control.
@@ -264,6 +274,9 @@ function init() {
       // the paper, and invisible outright for the reset note, whose ground is
       // the paper.
       edgeInk: pal.crack,
+      // Nothing was previewed, so the crack has no head start on the ground
+      // and has to grow its lead from the note once the click lands.
+      cold: isStaff(note),
       shapes: isFrame(note) ? null : shapesFor(note),
       reach: active && active.note === note ? active.reach : 0,
       inset: 0,
@@ -334,6 +347,7 @@ function init() {
     const current = root.getAttribute('data-theme') || 'fg';
     for (const n of notes) {
       const here = token(n) === current;
+      if (isStaff(n)) { n.setAttribute('aria-disabled', String(here)); continue; }
       n.disabled = here;
       n.setAttribute('aria-pressed', String(here));
     }
@@ -515,7 +529,11 @@ function init() {
       // just ahead of it rather than racing off to the corner on its own clock.
       const t = Math.min(1, (performance.now() - a.t0) / BURST_MS);
       a.spread = R * Math.pow(t, 1.6);
-      a.reach = Math.max(a.from, a.spread + HOVER_REACH);
+      // A hovered note already has its crack out to HOVER_REACH. A cold one
+      // would pop to that length on the first frame, so it eases out over the
+      // first quarter of the move instead.
+      const lead = a.cold ? HOVER_REACH * easeOut(Math.min(1, t * 4)) : HOVER_REACH;
+      a.reach = Math.max(a.from, a.spread + lead);
       a.thick = CELL * (2 + 2 * t);
       if (t >= 1) {
         // The ground covers the viewport, so handing it back to the body is
@@ -565,15 +583,18 @@ function init() {
     // Guarded rather than trusting the disabled state to swallow the event: a
     // browser withholds pointer events from a disabled control, but a
     // programmatic dispatch reaches it regardless.
-    ['pointerenter', 'focus'].forEach(ev =>
-      note.addEventListener(ev, () => {
-        if (note.disabled || reduceMotion.matches) return;
-        begin(note);
-      })
-    );
-    ['pointerleave', 'blur'].forEach(ev =>
-      note.addEventListener(ev, () => release(note))
-    );
-    note.addEventListener('click', () => { if (!note.disabled) fire(note); });
+    // Staff notes skip all of this: their hover is only the CSS swell.
+    if (!isStaff(note)) {
+      ['pointerenter', 'focus'].forEach(ev =>
+        note.addEventListener(ev, () => {
+          if (note.disabled || reduceMotion.matches) return;
+          begin(note);
+        })
+      );
+      ['pointerleave', 'blur'].forEach(ev =>
+        note.addEventListener(ev, () => release(note))
+      );
+    }
+    note.addEventListener('click', () => { if (!isInert(note)) fire(note); });
   });
 }

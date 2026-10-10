@@ -104,6 +104,19 @@
   /* The staff SVGs paint with currentColor, so the dividers follow --theme. */
   .staff{height:44px;width:100%;display:flex;align-items:center;justify-content:center;opacity:.8;color:var(--theme)}
   .staff svg{width:100%;height:100%;max-width:1000px}
+  /* The noteheads on the staff are song notes too, but quieter ones: no ring
+     and no hover preview, they just swell. The swell is anchored on the head
+     (83% down a box that runs from the stem's tip to the head's base) so the
+     stem grows away from it. The transparent stroke on the head widens the hit
+     target without widening that box, since fill-box leaves strokes out. */
+  .staff-note{
+    color:var(--note);cursor:pointer;
+    transform-box:fill-box;transform-origin:50% 83%;
+    transition:transform .22s cubic-bezier(.2,.9,.3,1.5);
+  }
+  .staff-note:hover{transform:scale(1.3)}
+  .staff-note[aria-disabled="true"]{cursor:default}
+  .staff-note[aria-disabled="true"]:hover{transform:none}
 
   /* --- section shells --- */
   section{padding:70px 0}
@@ -236,11 +249,11 @@
   .note svg{width:15px;height:19px;overflow:visible}
   /* The notes keep their song color even while the page is monochrome —
      four specks of color on a grey page is most of the invitation. */
-  .note[data-song="blue"]{--note:var(--blue)}
-  .note[data-song="jade"]{--note:var(--jade)}
-  .note[data-song="brass"]{--note:var(--brass)}
-  .note[data-song="tomato"]{--note:var(--tomato)}
-  .note[data-song="fg"]{--note:var(--fg)}
+  [data-song="blue"]{--note:var(--blue)}
+  [data-song="jade"]{--note:var(--jade)}
+  [data-song="brass"]{--note:var(--brass)}
+  [data-song="tomato"]{--note:var(--tomato)}
+  [data-song="fg"]{--note:var(--fg)}
   /* The ring is always drawn, on every note. It used to appear only on hover,
      which meant the affordance was invisible until you had already found it.
      Hover brightens it rather than introducing it. */
@@ -496,10 +509,10 @@
         <line x1="0" y1="10" x2="1000" y2="10"/><line x1="0" y1="18" x2="1000" y2="18"/>
         <line x1="0" y1="26" x2="1000" y2="26"/><line x1="0" y1="34" x2="1000" y2="34"/>
       </g>
-      <circle cx="120" cy="26" r="4" fill="currentColor"/><line x1="124" y1="26" x2="124" y2="6" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="300" cy="18" r="4" fill="currentColor"/><line x1="304" y1="18" x2="304" y2="-2" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="540" cy="34" r="4" fill="currentColor"/><line x1="544" y1="34" x2="544" y2="14" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="760" cy="18" r="4" fill="currentColor"/><line x1="764" y1="18" x2="764" y2="-2" stroke="currentColor" stroke-width="1.5"/>
+      <g class="staff-note" data-song="blue"><circle class="staff-head" cx="120" cy="26" r="4" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="124" y1="26" x2="124" y2="6" stroke="currentColor" stroke-width="1.5"/></g>
+      <g class="staff-note" data-song="jade"><circle class="staff-head" cx="300" cy="18" r="4" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="304" y1="18" x2="304" y2="-2" stroke="currentColor" stroke-width="1.5"/></g>
+      <g class="staff-note" data-song="brass"><circle class="staff-head" cx="540" cy="34" r="4" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="544" y1="34" x2="544" y2="14" stroke="currentColor" stroke-width="1.5"/></g>
+      <g class="staff-note" data-song="tomato"><circle class="staff-head" cx="760" cy="18" r="4" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="764" y1="18" x2="764" y2="-2" stroke="currentColor" stroke-width="1.5"/></g>
     </svg>
   </div>
 
@@ -547,10 +560,10 @@
         <line x1="0" y1="10" x2="1000" y2="10"/><line x1="0" y1="18" x2="1000" y2="18"/>
         <line x1="0" y1="26" x2="1000" y2="26"/><line x1="0" y1="34" x2="1000" y2="34"/>
       </g>
-      <circle cx="180" cy="34" r="4" fill="currentColor"/><line x1="184" y1="34" x2="184" y2="14" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="430" cy="26" r="4" fill="currentColor"/><line x1="434" y1="26" x2="434" y2="6" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="680" cy="10" r="4" fill="currentColor"/><line x1="684" y1="10" x2="684" y2="-10" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="860" cy="26" r="4" fill="currentColor"/><line x1="864" y1="26" x2="864" y2="6" stroke="currentColor" stroke-width="1.5"/>
+      <g class="staff-note" data-song="jade"><circle class="staff-head" cx="180" cy="34" r="4" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="184" y1="34" x2="184" y2="14" stroke="currentColor" stroke-width="1.5"/></g>
+      <g class="staff-note" data-song="brass"><circle class="staff-head" cx="430" cy="26" r="4" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="434" y1="26" x2="434" y2="6" stroke="currentColor" stroke-width="1.5"/></g>
+      <g class="staff-note" data-song="tomato"><circle class="staff-head" cx="680" cy="10" r="4" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="684" y1="10" x2="684" y2="-10" stroke="currentColor" stroke-width="1.5"/></g>
+      <g class="staff-note" data-song="blue"><circle class="staff-head" cx="860" cy="26" r="4" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="864" y1="26" x2="864" y2="6" stroke="currentColor" stroke-width="1.5"/></g>
     </svg>
   </div>
 
@@ -605,10 +618,10 @@
         <line x1="0" y1="10" x2="1000" y2="10"/><line x1="0" y1="18" x2="1000" y2="18"/>
         <line x1="0" y1="26" x2="1000" y2="26"/><line x1="0" y1="34" x2="1000" y2="34"/>
       </g>
-      <circle cx="150" cy="18" r="4" fill="currentColor"/><line x1="154" y1="18" x2="154" y2="-2" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="380" cy="34" r="4" fill="currentColor"/><line x1="384" y1="34" x2="384" y2="14" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="620" cy="26" r="4" fill="currentColor"/><line x1="624" y1="26" x2="624" y2="6" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="820" cy="18" r="4" fill="currentColor"/><line x1="824" y1="18" x2="824" y2="-2" stroke="currentColor" stroke-width="1.5"/>
+      <g class="staff-note" data-song="brass"><circle class="staff-head" cx="150" cy="18" r="4" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="154" y1="18" x2="154" y2="-2" stroke="currentColor" stroke-width="1.5"/></g>
+      <g class="staff-note" data-song="tomato"><circle class="staff-head" cx="380" cy="34" r="4" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="384" y1="34" x2="384" y2="14" stroke="currentColor" stroke-width="1.5"/></g>
+      <g class="staff-note" data-song="blue"><circle class="staff-head" cx="620" cy="26" r="4" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="624" y1="26" x2="624" y2="6" stroke="currentColor" stroke-width="1.5"/></g>
+      <g class="staff-note" data-song="jade"><circle class="staff-head" cx="820" cy="18" r="4" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="824" y1="18" x2="824" y2="-2" stroke="currentColor" stroke-width="1.5"/></g>
     </svg>
   </div>
 
@@ -651,7 +664,7 @@
         <line x1="0" y1="10" x2="1000" y2="10"/><line x1="0" y1="18" x2="1000" y2="18"/>
         <line x1="0" y1="26" x2="1000" y2="26"/><line x1="0" y1="34" x2="1000" y2="34"/>
       </g>
-      <circle cx="500" cy="18" r="5" fill="currentColor"/><line x1="505" y1="18" x2="505" y2="-4" stroke="currentColor" stroke-width="1.5"/>
+      <g class="staff-note" data-song="tomato"><circle class="staff-head" cx="500" cy="18" r="5" fill="currentColor" stroke="transparent" stroke-width="12"/><line x1="505" y1="18" x2="505" y2="-4" stroke="currentColor" stroke-width="1.5"/></g>
     </svg>
   </div>
 
