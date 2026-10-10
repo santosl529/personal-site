@@ -287,27 +287,27 @@
 
   /* A note appears beside a nav word when you point at the word, tinted to
      that section's song. The word still navigates; the note beside it changes
-     the site — two targets, one row. The note floats beside the word rather
-     than opening a gap for itself: the links are pinned to the right, so any
-     width it took pushed the word you were pointing at out from under the
-     cursor. It also opens on the side away from the pointer (notes.js sets
-     data-note-side as you come in), so it never lands under it either. Nav
-     notes exist only where there is a real pointer to hover with; on touch the
-     section headings are the way in. */
+     the site — two targets, one row. The row opens a little room for it, but
+     only 12px: the links are pinned to the right, so whatever width it takes
+     slides the word you are pointing at away from the cursor, and taking the
+     note's full 25px moved it too far. The rest of the note hangs out into
+     the gap to the next word. Nav notes exist only where there is a real
+     pointer to hover with; on touch the section headings are the way in. */
   .nav-brand,.nav-item{display:flex;align-items:center;position:relative}
   .note.note-nav{display:none}
   @media (hover:hover) and (pointer:fine){
+    .nav-brand,.nav-item{transition:padding-right .2s ease}
+    .nav-brand:hover,.nav-item:hover{padding-right:12px}
+    /* Pinned to the item's right edge, which holds still while the padding
+       grows (it is the word that slides), so the note opens in place. 3px back
+       from that edge puts it 9px clear of the word once the padding is in, and
+       the padding is also what keeps the hover alive between word and note. */
     .note.note-nav{
-      display:inline-flex;position:absolute;top:50%;left:calc(100% + 9px);
+      display:inline-flex;position:absolute;top:50%;left:calc(100% - 3px);
       width:18px;height:18px;margin-top:-9px;
       opacity:0;scale:.55;pointer-events:none;
       transition:opacity .16s ease,scale .2s cubic-bezier(.2,.9,.3,1.5);
     }
-    [data-note-side="left"] > .note.note-nav{left:auto;right:calc(100% + 9px)}
-    /* Bridges the 9px between word and note, so crossing to it does not drop
-       the hover that is holding it open. */
-    .note.note-nav::after{content:"";position:absolute;top:0;bottom:0;width:10px;right:100%}
-    [data-note-side="left"] > .note.note-nav::after{right:auto;left:100%}
     .note.note-nav svg{width:9px;height:11px;flex:0 0 auto}
     /* Hidden notes take no pointer events: an invisible note beside every word
        would otherwise still catch clicks. */
@@ -402,11 +402,12 @@
     nav ul{gap:14px}
     .tagline{min-height:calc(1.4em * 3)}
   }
-  /* Wherever nav notes exist, the words are spaced so one can float in the gap
-     with 9px either side of it. After the narrow-screen block on purpose: a
-     narrow window with a mouse still opens notes, and 14px cannot hold one. */
+  /* A note hangs 15px into the gap past its item, so the gap stays at 24px
+     wherever nav notes exist, leaving 9px before the next word. After the
+     narrow-screen block on purpose: a narrow window with a mouse still opens
+     notes, and 14px cannot hold one. */
   @media (hover:hover) and (pointer:fine){
-    nav ul{gap:36px}
+    nav ul{gap:24px}
   }
   /* Applied to the root for the length of a song landing, and only then. As a
      permanent `*` rule this made every color change on the page take .65s —
